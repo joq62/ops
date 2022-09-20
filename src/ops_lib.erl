@@ -12,11 +12,18 @@
 -module(ops_lib).   
  
 -export([
+	 cmd/5,
 	 create_agent/1,
 	 mkdir/2,
 	 rmdir/2,
+	 rmdir_r/2,
+	 pwd/1,
 	 cp_file/4,
 	 rm_file/3
+	]).
+
+-export([
+	 git_clone/3
 	]).
 
 
@@ -26,8 +33,48 @@
 %% --------------------------------------------------------------------
 
 -define(NODENAME,"operation").
+-define(TEMP_DIR,"temp_operation").
 -define(SSH_TIMEOUT,5000).
 
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+cmd(HostName,M,F,A,TimeOut)->
+    Reply=case ops_lib:create_agent(HostName) of
+	      {error,[node_exists_on_host,HostName]}->
+		  {error,[node_exists_on_host,HostName]};
+	      {ok,Node} ->
+		  R=rpc:call(Node,M,F,A,TimeOut),
+		  rpc:call(Node,init,stop,[]),
+		  R
+	  end,
+    Reply.
+
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+git_clone(HostName,AppId,DirToClone)->
+    Reply=case config:application_gitpath(AppId) of
+		{error,Reason}->
+		    {error,[AppId,Reason]};
+		GitPath->
+		  case ops_lib:create_agent(HostName) of
+		      {error,[node_exists_on_host,HostName]}->
+			  {error,[node_exists_on_host,HostName]};
+		      {ok,Node} ->
+			  R=appl:git_clone_to_dir(Node,GitPath,DirToClone),
+			  rpc:call(Node,init,stop,[]),
+			  R
+		  end
+	  end,
+    Reply.
+			  
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
@@ -58,6 +105,24 @@ mkdir(HostName,DirName)->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
+pwd(HostName)->
+    Reply=case ops_lib:create_agent(HostName) of
+	      {error,[node_exists_on_host,HostName]}->
+		  {error,[node_exists_on_host,HostName]};
+	      {ok,Node} ->
+		  R=rpc:call(Node,file,get_cwd,[],5000),
+		  rpc:call(Node,init,stop,[]),
+		  R
+	  end,
+    Reply.
+	     
+	    
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
 rmdir(HostName,DirName)->
     Reply=case ops_lib:create_agent(HostName) of
 	      {error,[node_exists_on_host,HostName]}->
@@ -78,7 +143,33 @@ rmdir(HostName,DirName)->
 	  end,
     Reply.
 	     
-		    
+ %% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+rmdir_r(HostName,DirName)->
+    Reply=case ops_lib:create_agent(HostName) of
+	      {error,[node_exists_on_host,HostName]}->
+		  {error,[node_exists_on_host,HostName]};
+	      {ok,Node} ->
+		  case rpc:call(Node,file,get_cwd,[],5000) of
+		      {error,Reason}->
+			  rpc:call(Node,init,stop,[]),
+			  {error,[Reason]};
+		      {badrpc,Reason}->
+			  rpc:call(Node,init,stop,[]),
+			  {error,[badrpc,Reason]};
+		      {ok,Cwd}->
+			  FullDirName=filename:join(Cwd,DirName),
+			  R=rpc:call(Node,os,cmd,["rm -rf "++FullDirName],5000),
+			  rpc:call(Node,init,stop,[]),
+			  R
+		  end
+	  end,
+    Reply.
+	     
+	    
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
@@ -96,7 +187,7 @@ create_agent(HostName)->
 		  NodeName=?NODENAME,
 		  Cookie=atom_to_list(erlang:get_cookie()),
 		  PaArgs=" ",
-		  EnvArgs=" ",
+		  EnvArgs=" -hidden ",
 		  TimeOut=?SSH_TIMEOUT,
 		  ssh_vm:create(HostName,NodeName,Cookie,PaArgs,EnvArgs,{Ip,SshPort,Uid,Pwd,TimeOut})
 	  end,

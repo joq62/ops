@@ -52,8 +52,15 @@
 
 
 -export([
+	 git_clone/3
+	]).
+
+
+-export([
+	 cmd/5,
 	 mkdir/2,
 	 rmdir/2,
+	 rmdir_r/2,
 	 cp_file/4,
 	 rm_file/3
 	]).
@@ -89,21 +96,29 @@ start_ops_node(HostName)->
 stop_ops_node(Node)->
     gen_server:call(?MODULE,{stop_ops_node,Node},infinity).    
 
-
+git_clone(HostName,Appl,Dir)->
+    gen_server:call(?MODULE,{git_clone,HostName,Appl,Dir},infinity).
 % mkdir
 % rmdir
 % cp_file
 % rm_file
 
-mkdir(Host,DirName)->
-    gen_server:call(?MODULE,{mkdir,Host,DirName},infinity).
-rmdir(Host,DirName)->
-    gen_server:call(?MODULE,{rmdir,Host,DirName},infinity).
+cmd(HostName,M,F,A,TimeOut)->
+    gen_server:call(?MODULE,{cmd,HostName,M,F,A,TimeOut},infinity).
 
-cp_file(SourceDir,SourcFileName,Host, DestDir)->
-    gen_server:call(?MODULE,{cp_file,SourceDir,SourcFileName,Host, DestDir},infinity).
-rm_file(Host, Dir,FileName)->
-    gen_server:call(?MODULE,{rm_file,Host, Dir,FileName},infinity).
+mkdir(HostName,DirName)->
+    gen_server:call(?MODULE,{mkdir,HostName,DirName},infinity).
+
+rmdir(HostName,DirName)->
+    gen_server:call(?MODULE,{rmdir,HostName,DirName},infinity).
+
+rmdir_r(HostName,DirName)->
+    gen_server:call(?MODULE,{rmdir_r,HostName,DirName},infinity).
+
+cp_file(SourceDir,SourcFileName,HostName, DestDir)->
+    gen_server:call(?MODULE,{cp_file,SourceDir,SourcFileName,HostName, DestDir},infinity).
+rm_file(HostName, Dir,FileName)->
+    gen_server:call(?MODULE,{rm_file,HostName, Dir,FileName},infinity).
     
 %% call
 start()-> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -149,17 +164,21 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 
+
+handle_call({cmd,HostName,M,F,A,TimeOut},_From, State) ->
+    Reply=ops_lib:cmd(HostName,M,F,A,TimeOut),
+    {reply, Reply, State};
+
+handle_call({git_clone,HostName,Appl,Dir},_From, State) ->
+    Reply=ops_lib:git_clone(HostName,Appl,Dir),
+    {reply, Reply, State};
+
+
 handle_call({start_ops_node,HostName},_From, State) ->
-      % create an agent on Host, check if node is running 
-    % Check if dir exists 
-    % if note - create a dir 
     Reply=ops_lib:create_agent(HostName),
     {reply, Reply, State};
 
 handle_call({stop_ops_node,Node},_From, State) ->
-    % create an agent on Host, check if node is running 
-    % Check if dir exists 
-    % if note - create a dir 
     Reply=rpc:call(Node,init,stop,[]),
     {reply, Reply, State};
 
@@ -172,10 +191,11 @@ handle_call({rmdir,HostName,DirName},_From, State) ->
     Reply=ops_lib:rmdir(HostName,DirName),
     {reply, Reply, State};
 
+handle_call({rmdir_r,HostName,DirName},_From, State) ->
+    Reply=ops_lib:rmdir_r(HostName,DirName),
+    {reply, Reply, State};
+
 handle_call({cp_file,SourceDir,SourcFileName,HostName, DestDir},_From, State) ->
-    % create an agent on Host
-    % Check if dir exists 
-    % if file copy  
     Reply=ops_lib:cp_file(SourceDir,SourcFileName,HostName, DestDir),
     {reply, Reply, State};
 
