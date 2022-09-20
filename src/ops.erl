@@ -176,11 +176,11 @@ handle_call({cp_file,SourceDir,SourcFileName,HostName, DestDir},_From, State) ->
     % create an agent on Host
     % Check if dir exists 
     % if file copy  
-    Reply=ok,
+    Reply=ops_lib:cp_file(SourceDir,SourcFileName,HostName, DestDir),
     {reply, Reply, State};
 
 handle_call({rm_file,HostName, Dir,FileName},_From, State) ->
-    Reply=ok,
+    Reply=ops_lib:rm_file(HostName, Dir,FileName),
     {reply, Reply, State};
 
 

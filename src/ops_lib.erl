@@ -14,9 +14,12 @@
 -export([
 	 create_agent/1,
 	 mkdir/2,
-	 rmdir/2
-
+	 rmdir/2,
+	 cp_file/4,
+	 rm_file/3
 	]).
+
+
 
 %% --------------------------------------------------------------------
 %% Include files
@@ -41,7 +44,7 @@ mkdir(HostName,DirName)->
 			  {error,[badrpc,Reason]};
 		      true ->
 			  rpc:call(Node,init,stop,[]),
-			  {error,[dir_already_exists,DirName]};
+			  {error,[already_exists,DirName]};
 		      false ->
 			  R=rpc:call(Node,file,make_dir,[DirName],5000),
 			  rpc:call(Node,init,stop,[]),
@@ -66,7 +69,7 @@ rmdir(HostName,DirName)->
 			  {error,[badrpc,Reason]};
 		     false ->
 			  rpc:call(Node,init,stop,[]),
-			  {error,[dir_eexists,DirName]};
+			  {error,[eexists,DirName]};
 		      true->
 			  R=rm:r(Node,DirName),
 			  rpc:call(Node,init,stop,[]),
@@ -104,13 +107,60 @@ create_agent(HostName)->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
-
+cp_file(SourceDir,SourcFileName,HostName, DestDir)->
+    Reply=case ops_lib:create_agent(HostName) of
+	      {error,[node_exists_on_host,HostName]}->
+		  {error,[node_exists_on_host,HostName]};
+	      {ok,Node} ->
+		  DestFileName=filename:join(DestDir,SourcFileName),
+		  SourceFileName=filename:join(SourceDir,SourcFileName),
+		  case rpc:call(Node,filelib,is_file,[DestFileName],5000) of
+		      {badrpc,Reason}->
+			  rpc:call(Node,init,stop,[]),
+			  {error,[badrpc,Reason]};
+		      true ->
+			  rpc:call(Node,init,stop,[]),
+			  {error,[already_exists,DestFileName]};
+		      false ->
+			  R=case file:read_file(SourceFileName) of
+				{error,Reason}->
+				    {error,[Reason]};
+				{ok,Bin}->
+				    rpc:call(Node,file,write_file,[DestFileName,Bin],5000)
+				 
+			    end,
+			  rpc:call(Node,init,stop,[]),
+			  R		 
+		  end
+	  end,
+    Reply.
+    
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
-
+rm_file(HostName, Dir,FileName)->
+    Reply=case ops_lib:create_agent(HostName) of
+	      {error,[node_exists_on_host,HostName]}->
+		  {error,[node_exists_on_host,HostName]};
+	      {ok,Node} ->
+		  FullFileName=filename:join(Dir,FileName),
+		  case rpc:call(Node,filelib,is_file,[FullFileName],5000) of
+		      {badrpc,Reason}->
+			  rpc:call(Node,init,stop,[]),
+			  {error,[badrpc,Reason]};
+		      false ->
+			  rpc:call(Node,init,stop,[]),
+			  {error,[eexists,FullFileName]};
+		      true ->
+			  R=rpc:call(Node,file,delete,[FullFileName],5000),
+			  rpc:call(Node,init,stop,[]),
+			  R
+		  end
+	  end,
+    Reply.
+    
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
