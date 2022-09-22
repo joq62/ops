@@ -49,6 +49,7 @@ cmd(HostName,M,F,A,TimeOut)->
 	      {ok,Node} ->
 		  R=rpc:call(Node,M,F,A,TimeOut),
 		  rpc:call(Node,init,stop,[]),
+		  true=vm:check_stopped_node(Node),
 		  R
 	  end,
     Reply.
@@ -70,6 +71,7 @@ git_clone(HostName,AppId,DirToClone)->
 		      {ok,Node} ->
 			  R=appl:git_clone_to_dir(Node,GitPath,DirToClone),
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  R
 		  end
 	  end,
@@ -88,13 +90,16 @@ mkdir(HostName,DirName)->
 		  case rpc:call(Node,filelib,is_dir,[DirName],5000) of
 		      {badrpc,Reason}->
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  {error,[badrpc,Reason]};
 		      true ->
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  {error,[already_exists,DirName]};
 		      false ->
 			  R=rpc:call(Node,file,make_dir,[DirName],5000),
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  R
 		  end
 	  end,
@@ -112,6 +117,7 @@ pwd(HostName)->
 	      {ok,Node} ->
 		  R=rpc:call(Node,file,get_cwd,[],5000),
 		  rpc:call(Node,init,stop,[]),
+		  true=vm:check_stopped_node(Node),
 		  R
 	  end,
     Reply.
@@ -131,13 +137,16 @@ rmdir(HostName,DirName)->
 		  case rpc:call(Node,filelib,is_dir,[DirName],5000) of
 		      {badrpc,Reason}->
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  {error,[badrpc,Reason]};
 		     false ->
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  {error,[eexists,DirName]};
 		      true->
 			  R=rm:r(Node,DirName),
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  R
 		  end
 	  end,
@@ -156,14 +165,17 @@ rmdir_r(HostName,DirName)->
 		  case rpc:call(Node,file,get_cwd,[],5000) of
 		      {error,Reason}->
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  {error,[Reason]};
 		      {badrpc,Reason}->
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  {error,[badrpc,Reason]};
 		      {ok,Cwd}->
 			  FullDirName=filename:join(Cwd,DirName),
 			  R=rpc:call(Node,os,cmd,["rm -rf "++FullDirName],5000),
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  R
 		  end
 	  end,
@@ -208,9 +220,11 @@ cp_file(SourceDir,SourcFileName,HostName, DestDir)->
 		  case rpc:call(Node,filelib,is_file,[DestFileName],5000) of
 		      {badrpc,Reason}->
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  {error,[badrpc,Reason]};
 		      true ->
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  {error,[already_exists,DestFileName]};
 		      false ->
 			  R=case file:read_file(SourceFileName) of
@@ -218,9 +232,9 @@ cp_file(SourceDir,SourcFileName,HostName, DestDir)->
 				    {error,[Reason]};
 				{ok,Bin}->
 				    rpc:call(Node,file,write_file,[DestFileName,Bin],5000)
-				 
 			    end,
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  R		 
 		  end
 	  end,
@@ -240,13 +254,16 @@ rm_file(HostName, Dir,FileName)->
 		  case rpc:call(Node,filelib,is_file,[FullFileName],5000) of
 		      {badrpc,Reason}->
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  {error,[badrpc,Reason]};
 		      false ->
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  {error,[eexists,FullFileName]};
 		      true ->
 			  R=rpc:call(Node,file,delete,[FullFileName],5000),
 			  rpc:call(Node,init,stop,[]),
+			  true=vm:check_stopped_node(Node),
 			  R
 		  end
 	  end,

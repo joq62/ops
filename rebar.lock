@@ -1,6 +1,6 @@
 [{<<"common">>,
   {git,"https://github.com/joq62/common.git",
-       {ref,"92fea74c34fa6d7a33acc424f6ef621ef420568c"}},
+       {ref,"a1e03a86f9062203c3084fb447a2345324959d2d"}},
   0},
  {<<"config">>,
   {git,"https://github.com/joq62/config.git",
