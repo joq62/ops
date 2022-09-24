@@ -45,7 +45,9 @@
 
 -export([
 	 start_ops_node/1,
-	 stop_ops_node/1
+	 stop_ops_node/1,
+	 start_node/4,
+	 stop_node/3
 	 
        
 	]).
@@ -91,10 +93,16 @@ appl_start([])->
     application:start(?MODULE).
 
 
+start_node(HostName,NodeName,Cookie,EnvArgs)->
+    gen_server:call(?MODULE,{start_node,HostName,NodeName,Cookie,EnvArgs},infinity).   
+stop_node(HostName,NodeName,Cookie)->
+    gen_server:call(?MODULE,{stop_node,HostName,NodeName,Cookie},infinity).   
+
+
 start_ops_node(HostName)->
     gen_server:call(?MODULE,{start_ops_node,HostName},infinity).   
-stop_ops_node(Node)->
-    gen_server:call(?MODULE,{stop_ops_node,Node},infinity).    
+stop_ops_node(HostName)->
+    gen_server:call(?MODULE,{stop_ops_node,HostName},infinity).    
 
 git_clone(HostName,Appl,Dir)->
     gen_server:call(?MODULE,{git_clone,HostName,Appl,Dir},infinity).
@@ -164,6 +172,12 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 
+handle_call({start_node,HostName,NodeName,Cookie,EnvArgs},_From, State) ->
+    Reply=ops_lib:start_node(HostName,NodeName,Cookie,EnvArgs),
+    {reply, Reply, State};
+handle_call({stop_node,HostName,NodeName,Cookie},_From, State) ->
+    Reply=ops_lib:stop_node(HostName,NodeName,Cookie),
+    {reply, Reply, State};
 
 handle_call({cmd,HostName,M,F,A,TimeOut},_From, State) ->
     Reply=ops_lib:cmd(HostName,M,F,A,TimeOut),
@@ -175,11 +189,11 @@ handle_call({git_clone,HostName,Appl,Dir},_From, State) ->
 
 
 handle_call({start_ops_node,HostName},_From, State) ->
-    Reply=ops_lib:create_agent(HostName),
+    Reply=ops_lib:start_ops_node(HostName),
     {reply, Reply, State};
 
-handle_call({stop_ops_node,Node},_From, State) ->
-    Reply=rpc:call(Node,init,stop,[]),
+handle_call({stop_ops_node,HostName},_From, State) ->
+    Reply=ops_lib:stop_ops_node(HostName),
     {reply, Reply, State};
 
 
