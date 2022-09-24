@@ -181,6 +181,7 @@ rmdir(Node,Cookie,DirName)->
 		  rm:r(Node,DirName)
 	  end,
     erlang:set_cookie(node(),CurrentCookie),
+    timer:sleep(1000),
     Reply.
 	     
  %% --------------------------------------------------------------------

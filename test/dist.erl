@@ -63,6 +63,55 @@ start()->
     {ok,W2}=dist_lib:cmd(ClNode2,ClCookie2Str,slave,start,[HostName,W2NodeName,W2Args],5000),
     pong=dist_lib:cmd(ClNode2,ClCookie2Str,net_adm,ping,[W2],2000),
 
+    
+    %% create dirs 
+    Appl="sd",
+    App=list_to_atom(Appl),
+    SourceDir="/home/joq62/erlang/infra_2/sd/ebin",
+
+    %%% Worker 1
+    
+    C1Dir="c1.dir",
+    ApplDir1=filename:join(C1Dir,Appl),
+    EbinApplDir1=filename:join(ApplDir1,"ebin"),
+    	
+    dist_lib:rmdir_r(ClNode1,ClCookie1Str,C1Dir),
+    ok=dist_lib:mkdir(ClNode1,ClCookie1Str,C1Dir),
+    ok=dist_lib:mkdir(ClNode1,ClCookie1Str,ApplDir1),
+    ok=dist_lib:mkdir(ClNode1,ClCookie1Str,EbinApplDir1),
+    
+    {ok,EbinFiles}=file:list_dir(SourceDir),
+    io:format("EbinFiles ~p~n",[EbinFiles]),
+    
+ 
+    [dist_lib:cp_file(W1,ClCookie1Str,SourceDir,SourcFileName,EbinApplDir1)||SourcFileName<-EbinFiles],
+   % load and start sd on worker
+    true=dist_lib:cmd(W1,ClCookie1Str,code,add_patha,[EbinApplDir1],5000),
+    ok=dist_lib:cmd(W1,ClCookie1Str,application,start,[sd],5000),
+    pong=dist_lib:cmd(W1,ClCookie1Str,sd,ping,[],5000),
+
+    %% Worker 2
+    C2Dir="c2.dir",
+    ApplDir2=filename:join(C2Dir,Appl),
+    EbinApplDir2=filename:join(ApplDir2,"ebin"),
+    	
+    dist_lib:rmdir_r(ClNode2,ClCookie2Str,C2Dir),
+    ok=dist_lib:mkdir(ClNode2,ClCookie2Str,C2Dir),
+    ok=dist_lib:mkdir(ClNode2,ClCookie2Str,ApplDir2),
+    ok=dist_lib:mkdir(ClNode2,ClCookie2Str,EbinApplDir2),
+    
+    {ok,EbinFiles}=file:list_dir(SourceDir),
+    io:format("EbinFiles ~p~n",[EbinFiles]),
+    
+    [dist_lib:cp_file(W2,ClCookie2Str,SourceDir,SourcFileName,EbinApplDir2)||SourcFileName<-EbinFiles],
+   % load and start sd on worker
+    true=dist_lib:cmd(W2,ClCookie2Str,code,add_patha,[EbinApplDir2],5000),
+    ok=dist_lib:cmd(W2,ClCookie2Str,application,start,[sd],5000),
+    pong=dist_lib:cmd(W2,ClCookie2Str,sd,ping,[],5000),
+
+
+    %% Clean up
+    
     true=dist_lib:stop_node(HostName,ClName1,ClCookie1Str),
     true=dist_lib:stop_node(HostName,ClName2,ClCookie2Str),
 
