@@ -18,102 +18,83 @@
 -define(OpsNodeName,"ops").
 -define(OpsCookie,"ops").
 
+-define(ClId_1,"c1").
+-define(ClCookieStr_1,"cookie_c1").
+-define(ClNumPods_1,5).
+%-define(ClNodeName_1,"c_1").
+
+-define(ClCookie_1,list_to_atom(?ClCookieStr_1)).
+-define(ClNodeC100_1,list_to_atom(?ClNodeName_1++"@"++"c100")).
+-define(ClNodeC200_1,list_to_atom(?ClNodeName_1++"@"++"c200")).
+%-define(ClWorkesNodeName_1,["w_c1_1","w_c1_2","w_c1_3","w_c1_4"]).
+
+-define(HostNames,["c100","c200"]).
+
+
+
+
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
 start()->
-    ok=application:start(ops),
+   
+    ok=setup(),
+
+    %% Create a new cluster 
+    ClusterId=?ClId_1,
+    ClusterNodeName=?ClId_1,
+    ClusterDir=?ClId_1++".dir",
+    ClusterCookie=?ClCookieStr_1,
+    NumPodsPerHost=?ClNumPods_1,
+    HostNames=?HostNames,
+
+    ClusterNodes=[ClusterNodeName++"@"++HostName||HostName<-HostNames],
+    WorkerNodeNames=[ClusterId++"_"++integer_to_list(N)||N<-lists:seq(0,NumPodsPerHost)],
+ %   WorkerNodes=[{WorkerNodeName,WorkerNodeName++"@"++HostName}||WorkerNodeName<-WorkerNodeNames,HostName<-HostNames],
+ %   WorkerDirs=[{WorkerNodeName,filename:join(ClusterDir,WorkerNodeName)}||WorkerNodeName<-WorkerNodeNames],
+    WorkerInfo=[{WorkerNodeName++"@"++HostName,filename:join(ClusterDir,WorkerNodeName),WorkerNodeName}||WorkerNodeName<-WorkerNodeNames,HostName<-HostNames],
   
-    HostName="c100",
-    ClName1="c1",
-    ClCookie1Str="c1",
-    ClCookie1=c1,
-    ClNode1=list_to_atom(ClName1++"@"++HostName),
-    ClName2="c2",
-    ClCookie2Str="c2",
-    ClCookie2=c2,
-    ClNode2=list_to_atom(ClName2++"@"++HostName),
+     
+    ["c1@c100","c1@c200"]=lists:sort(ClusterNodes),
+
+    [{"c1_0@c100","c1.dir/c1_0","c1_0"},{"c1_0@c200","c1.dir/c1_0","c1_0"},{"c1_1@c100","c1.dir/c1_1","c1_1"},
+     {"c1_1@c200","c1.dir/c1_1","c1_1"},{"c1_2@c100","c1.dir/c1_2","c1_2"},{"c1_2@c200","c1.dir/c1_2","c1_2"},
+     {"c1_3@c100","c1.dir/c1_3","c1_3"},{"c1_3@c200","c1.dir/c1_3","c1_3"},{"c1_4@c100","c1.dir/c1_4","c1_4"},
+     {"c1_4@c200","c1.dir/c1_4","c1_4"},{"c1_5@c100","c1.dir/c1_5","c1_5"},{"c1_5@c200","c1.dir/c1_5","c1_5"}]=lists:sort(WorkerInfo),
     
-    % delete nodes to 
+  
+    % Start new cluster nodes
+    NewClusterStartResult=[L||{ok,L}<-[new_cluster_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)||HostName<-HostNames]],
+    [{"c100","c1",'c1@c100',"cookie_c1","c1.dir"},
+     {"c200","c1",'c1@c200',"cookie_c1","c1.dir"}]=NewClusterStartResult,
+    [{_,_,ConnectNode,_,_}|T]=NewClusterStartResult,
+    [dist_lib:cmd(ConnectNode,ClusterCookie,net_adm,ping,[Node],5000)||{_,_,Node,_,_}<-T],
+    ['c1@c200']=lists:sort(dist_lib:cmd(ConnectNode,ClusterCookie,erlang,nodes,[],5000)),
     
-    true=dist_lib:stop_node(HostName,ClName1,ClCookie1Str),
-    true=dist_lib:stop_node(HostName,ClName2,ClCookie2Str),
+    %% stop specif worker node
+
+    %% Restart specific worker node 
+
+    %% Start workernodes 
+
+
+
+    %% delete specific worker node
+
+
+    %% Restart specific worker node
     
-    %Create Nodes
-
-    true=dist_lib:start_node(HostName,ClName1,ClCookie1Str," -detached -hidden "),
-    true=dist_lib:start_node(HostName,ClName2,ClCookie2Str," -detached -hidden "),
-
-    D=erlang:date(),
-    D=dist_lib:cmd(ClNode1,ClCookie1Str,erlang,date,[],2000),
-    D=dist_lib:cmd(ClNode2,ClCookie2Str,erlang,date,[],2000),
-
-    %% create workers
-    W1NodeName="w1",
-    W1Args=" -setcookie "++ClCookie1Str,
-    {ok,W1}=dist_lib:cmd(ClNode1,ClCookie1Str,slave,start,[HostName,W1NodeName,W1Args],5000),
-    pong=dist_lib:cmd(ClNode1,ClCookie1Str,net_adm,ping,[W1],2000),
-
-
-    %% create workers
-    W2NodeName="w2",
-    W2Args=" -setcookie "++ClCookie2Str,
-    {ok,W2}=dist_lib:cmd(ClNode2,ClCookie2Str,slave,start,[HostName,W2NodeName,W2Args],5000),
-    pong=dist_lib:cmd(ClNode2,ClCookie2Str,net_adm,ping,[W2],2000),
-
+    %Delete cluster
     
-    %% create dirs 
-    Appl="sd",
-    App=list_to_atom(Appl),
-    SourceDir="/home/joq62/erlang/infra_2/sd/ebin",
-
-    %%% Worker 1
+    [true,true]=[delete_cluster_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)||HostName<-HostNames],
     
-    C1Dir="c1.dir",
-    ApplDir1=filename:join(C1Dir,Appl),
-    EbinApplDir1=filename:join(ApplDir1,"ebin"),
-    	
-    dist_lib:rmdir_r(ClNode1,ClCookie1Str,C1Dir),
-    ok=dist_lib:mkdir(ClNode1,ClCookie1Str,C1Dir),
-    ok=dist_lib:mkdir(ClNode1,ClCookie1Str,ApplDir1),
-    ok=dist_lib:mkdir(ClNode1,ClCookie1Str,EbinApplDir1),
-    
-    {ok,EbinFiles}=file:list_dir(SourceDir),
-    io:format("EbinFiles ~p~n",[EbinFiles]),
     
  
-    [dist_lib:cp_file(W1,ClCookie1Str,SourceDir,SourcFileName,EbinApplDir1)||SourcFileName<-EbinFiles],
-   % load and start sd on worker
-    true=dist_lib:cmd(W1,ClCookie1Str,code,add_patha,[EbinApplDir1],5000),
-    ok=dist_lib:cmd(W1,ClCookie1Str,application,start,[sd],5000),
-    pong=dist_lib:cmd(W1,ClCookie1Str,sd,ping,[],5000),
-
-    %% Worker 2
-    C2Dir="c2.dir",
-    ApplDir2=filename:join(C2Dir,Appl),
-    EbinApplDir2=filename:join(ApplDir2,"ebin"),
-    	
-    dist_lib:rmdir_r(ClNode2,ClCookie2Str,C2Dir),
-    ok=dist_lib:mkdir(ClNode2,ClCookie2Str,C2Dir),
-    ok=dist_lib:mkdir(ClNode2,ClCookie2Str,ApplDir2),
-    ok=dist_lib:mkdir(ClNode2,ClCookie2Str,EbinApplDir2),
-    
-    {ok,EbinFiles}=file:list_dir(SourceDir),
-    io:format("EbinFiles ~p~n",[EbinFiles]),
-    
-    [dist_lib:cp_file(W2,ClCookie2Str,SourceDir,SourcFileName,EbinApplDir2)||SourcFileName<-EbinFiles],
-   % load and start sd on worker
-    true=dist_lib:cmd(W2,ClCookie2Str,code,add_patha,[EbinApplDir2],5000),
-    ok=dist_lib:cmd(W2,ClCookie2Str,application,start,[sd],5000),
-    pong=dist_lib:cmd(W2,ClCookie2Str,sd,ping,[],5000),
-
-
     %% Clean up
     
-    true=dist_lib:stop_node(HostName,ClName1,ClCookie1Str),
-    true=dist_lib:stop_node(HostName,ClName2,ClCookie2Str),
+    [true,true]=[dist_lib:stop_node(HostName,?ClId_1,?ClCookieStr_1)||HostName<-?HostNames],
 
     init:stop(),
     ok.
@@ -124,14 +105,52 @@ start()->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+new_cluster_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)->
+    Result=case dist_lib:start_node(HostName,ClusterNodeName,ClusterCookie," -detached  ") of
+	       {error,Reason}->
+		   {error,[Reason,HostName,ClusterNodeName,ClusterCookie]};
+	       true ->
+		   ClusterNode=list_to_atom(ClusterNodeName++"@"++HostName),
+		   dist_lib:rmdir_r(ClusterNode,ClusterCookie,ClusterDir),
+		   case dist_lib:mkdir(ClusterNode,ClusterCookie,ClusterDir) of
+		       {error,Reason}->
+			   {error,[Reason,HostName,ClusterNodeName,ClusterCookie]};
+		       ok->
+			   case dist_lib:cmd(ClusterNode,ClusterCookie,filelib,is_dir,[ClusterDir],5000) of
+			       false->
+				   {error,[cluster_dir_eexists,ClusterDir,HostName,ClusterNodeName,ClusterCookie]};
+			       true->
+				   {ok,{HostName,ClusterNodeName,ClusterNode,ClusterCookie,ClusterDir}}
+			   end
+		   end
+	   end,
+    Result.
 
-    
+new_cluster_nodes([],_,_,_,Acc)->
+    ErrorList=[{error,Reason}||{error,Reason}<-Acc],
+    Result=case ErrorList of
+	       []->
+		   R=[L||{ok,L}<-Acc],
+		   {ok,R};
+	       ErrorList->
+		   {error,ErrorList}
+	   end,	       
+    Result;
+
+new_cluster_nodes([HostName|T],ClusterNodeName,ClusterCookie,ClusterDir,Acc) ->
+    NewAcc=[new_cluster_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)|Acc],
+    new_cluster_nodes(T,ClusterNodeName,ClusterCookie,ClusterDir,NewAcc).
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+
+delete_cluster_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)->
+    ClusterNode=list_to_atom(ClusterNodeName++"@"++HostName),
+    dist_lib:rmdir_r(ClusterNode,ClusterCookie,ClusterDir),
+    dist_lib:stop_node(HostName,ClusterNodeName,ClusterCookie).
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -141,7 +160,6 @@ start()->
 
 
 setup()->
-  
-    
-    R=ok,
-    R.
+    ok=application:start(ops),
+    [true,true]=[dist_lib:stop_node(HostName,?ClId_1,?ClCookieStr_1)||HostName<-?HostNames],
+    ok.
