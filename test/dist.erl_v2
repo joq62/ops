@@ -161,9 +161,5 @@ delete_cluster_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)->
 
 setup()->
     ok=application:start(ops),
-    ClusterNodeName=?ClId_1,
-    ClusterDir=?ClId_1++".dir",
-    ClusterCookie=?ClCookieStr_1,
-    [true,true]=[cluster:delete_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)||HostName<-?HostNames],
-
+    [true,true]=[dist_lib:stop_node(HostName,?ClId_1,?ClCookieStr_1)||HostName<-?HostNames],
     ok.

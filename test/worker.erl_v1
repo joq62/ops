@@ -9,21 +9,13 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(pod).   
+-module(worker).   
  
 -export([
-	 create/6,
+	 create/4,
 	 delete/4,
-	 available/3
+	 workers/0
 	]).
-
--record(pod,{
-	     hostname,
-	     node,
-	     name,
-	     dir
-	    }).
-	     
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
@@ -33,27 +25,27 @@
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-create(ClusterNode,ClusterCookie,HostName,PodNodeName,PodDir,Args)-> 
-    dist_lib:rmdir_r(ClusterNode,ClusterCookie,PodDir),
-    Result=case dist_lib:mkdir(ClusterNode,ClusterCookie,PodDir) of
+create(ClusterNode,ClusterCookie,HostName,WorkerNodeName,WorkerDir,Args)-> 
+    dist_lib:rmdir_r(ClusterNode,ClusterCookie,WorkerDir),
+    Result=case dist_lib:mkdir(ClusterNode,ClusterCookie,ClusterDir) of
 	       {error,Reason}->
-		   {error,[Reason,ClusterNode,PodDir]};
+		   {error,[Reason,HostName,ClusterNodeName,ClusterCookie]};
 	       ok->
-		   case dist_lib:cmd(ClusterNode,ClusterCookie,filelib,is_dir,[PodDir],5000) of
+		   case dist_lib:cmd(ClusterNode,ClusterCookie,filelib,is_dir,[ClusterDir],5000) of
 		       false->
-			   {error,[cluster_dir_eexists,PodDir,ClusterNode]};
+			   {error,[cluster_dir_eexists,ClusterDir,HostName,ClusterNodeName,ClusterCookie]};
 		       true->
-			   case dist_lib:cmd(ClusterNode,ClusterCookie,slave,start,[HostName,PodNodeName,Args],5000) of
+			   case dist_lib:cmd(ClusterNode,ClusterCookie,slave,start,[HostName,WorkerNodeName,Args],5000) of
 			       {error,Reason}->
-				   dist_lib:rmdir_r(ClusterNode,ClusterCookie,PodDir),
+				   dist_lib:rmdir_r(ClusterNode,ClusterCookie,WorkerDir),
 				    {error,Reason};
-			        {ok,PodNode}->
-				   case dist_lib:cmd(ClusterNode,ClusterCookie,net_adm,ping,[PodNode],3000) of
+			        {ok,WorkerNode}->
+				   case dist_lib:cmd(ClusterNode,ClusterCookie,net_adm,ping,[WorkerNode],3000) of
 				       pang->
-					   dist_lib:rmdir_r(ClusterNode,ClusterCookie,PodDir),
-					   {error,[failed_to_connect,PodNode]};
+					   dist_lib:rmdir_r(ClusterNode,ClusterCookie,WorkerDir),
+					   {error,[failed_to_connect,WorkerNode]};
 				       pong->
-					   {ok,#pod{hostname=HostName,node=PodNode,name=PodNodeName,dir=PodDir}}
+					   {ok,WorkerNode}
 				   end
 			   end
 		   end
@@ -66,19 +58,14 @@ create(ClusterNode,ClusterCookie,HostName,PodNodeName,PodDir,Args)->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
 
-delete(ClusterNode,ClusterCookie,PodNode,PodDir)->
-    dist_lib:rmdir_r(ClusterNode,ClusterCookie,PodDir),
-    dist_lib:cmd(ClusterNode,ClusterCookie,slave,stop,[PodNode],5000).
+delete(ClusterNode,ClusterCookie,WorkerNode)->
+    dist_lib:rmdir_r(ClusterNode,ClusterCookie,ClusterDir),
+    dist_lib:cmd(ClusterNode,ClusterCookie,slave,stop,[WorkerNode],5000).
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-available(HostNames,ClusterNodeName,ClusterCookie)->
-    ClusterNodes=cluster:availble(HostNames,ClusterNodeName,ClusterCookie),
-    [ClusterNode|_]=ClusterNodes,
-    AllNodes=dist_lib:cmd(ClusterNode,ClusterCookie,erlang,nodes,[],5000),
-    [N||N<-AllNodes,
-	false=:=lists:member(N,ClusterNodes)].
-
+workers(ClusterNode,ClusterCookie)->
+    dist_lib:cmd(ClusterNode,ClusterCookie,erlang,nodes,[],5000).

@@ -9,7 +9,7 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(dist).   
+-module(cl_test).   
  
 -export([start/0]).
 %% --------------------------------------------------------------------
@@ -28,7 +28,7 @@
 -define(ClNodeC200_1,list_to_atom(?ClNodeName_1++"@"++"c200")).
 %-define(ClWorkesNodeName_1,["w_c1_1","w_c1_2","w_c1_3","w_c1_4"]).
 
--define(HostNames,["c100","c200"]).
+-define(HostNames,["c100","c200","c201"]).
 
 
 
@@ -50,51 +50,56 @@ start()->
     NumPodsPerHost=?ClNumPods_1,
     HostNames=?HostNames,
 
-    ClusterNodes=[ClusterNodeName++"@"++HostName||HostName<-HostNames],
-    WorkerNodeNames=[ClusterId++"_"++integer_to_list(N)||N<-lists:seq(0,NumPodsPerHost)],
- %   WorkerNodes=[{WorkerNodeName,WorkerNodeName++"@"++HostName}||WorkerNodeName<-WorkerNodeNames,HostName<-HostNames],
- %   WorkerDirs=[{WorkerNodeName,filename:join(ClusterDir,WorkerNodeName)}||WorkerNodeName<-WorkerNodeNames],
-    WorkerInfo=[{WorkerNodeName++"@"++HostName,filename:join(ClusterDir,WorkerNodeName),WorkerNodeName}||WorkerNodeName<-WorkerNodeNames,HostName<-HostNames],
+   % ClusterNodes=[list_to_atom(ClusterNodeName++"@"++HostName)||HostName<-HostNames],
+    PodNodeNames=[ClusterId++"_"++integer_to_list(N)||N<-lists:seq(0,NumPodsPerHost)],
   
-     
-    ["c1@c100","c1@c200"]=lists:sort(ClusterNodes),
-
-    [{"c1_0@c100","c1.dir/c1_0","c1_0"},{"c1_0@c200","c1.dir/c1_0","c1_0"},{"c1_1@c100","c1.dir/c1_1","c1_1"},
-     {"c1_1@c200","c1.dir/c1_1","c1_1"},{"c1_2@c100","c1.dir/c1_2","c1_2"},{"c1_2@c200","c1.dir/c1_2","c1_2"},
-     {"c1_3@c100","c1.dir/c1_3","c1_3"},{"c1_3@c200","c1.dir/c1_3","c1_3"},{"c1_4@c100","c1.dir/c1_4","c1_4"},
-     {"c1_4@c200","c1.dir/c1_4","c1_4"},{"c1_5@c100","c1.dir/c1_5","c1_5"},{"c1_5@c200","c1.dir/c1_5","c1_5"}]=lists:sort(WorkerInfo),
-    
   
     % Start new cluster nodes
-    NewClusterStartResult=[L||{ok,L}<-[new_cluster_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)||HostName<-HostNames]],
-    [{"c100","c1",'c1@c100',"cookie_c1","c1.dir"},
-     {"c200","c1",'c1@c200',"cookie_c1","c1.dir"}]=NewClusterStartResult,
-    [{_,_,ConnectNode,_,_}|T]=NewClusterStartResult,
-    [dist_lib:cmd(ConnectNode,ClusterCookie,net_adm,ping,[Node],5000)||{_,_,Node,_,_}<-T],
-    ['c1@c200']=lists:sort(dist_lib:cmd(ConnectNode,ClusterCookie,erlang,nodes,[],5000)),
+    StartR=[cluster:create_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)||HostName<-HostNames],
+    cluster:connect(HostNames,ClusterNodeName,ClusterCookie),
+    ['c1@c100','c1@c200','c1@c201']=cluster:availble(HostNames,ClusterNodeName,ClusterCookie),
+    []=cluster:not_availble(HostNames,ClusterNodeName,ClusterCookie),
+   
     
-    %% stop specif worker node
-
-    %% Restart specific worker node 
-
     %% Start workernodes 
+    PodArgs=" -setcookie "++ClusterCookie,
+    PodInfo=[{list_to_atom(ClusterNodeName++"@"++HostName),ClusterCookie,HostName,PodNodeName,filename:join(ClusterDir,PodNodeName),PodArgs,list_to_atom(PodNodeName++"@"++HostName)}||PodNodeName<-PodNodeNames,HostName<-HostNames],
+  
+    _PodStart=[pod:create(ClusterNode,ClusterCookie,HostName,PodNodeName,PodDir,PodArgs)||{ClusterNode,ClusterCookie,HostName,PodNodeName,PodDir,PodArgs,_PodNode}<-PodInfo],
+  
+    ['c1_0@c100','c1_0@c200','c1_1@c100','c1_0@c201','c1_1@c200','c1_2@c100',
+     'c1_1@c201','c1_2@c200','c1_3@c100','c1_2@c201','c1_3@c200','c1_4@c100',
+     'c1_3@c201','c1_4@c200','c1_5@c100','c1_4@c201','c1_5@c200']=pod:available(HostNames,ClusterNodeName,ClusterCookie),
 
-
-
-    %% delete specific worker node
-
-
-    %% Restart specific worker node
     
-    %Delete cluster
     
-    [true,true]=[delete_cluster_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)||HostName<-HostNames],
+    %% load start application 
+    Appl="sd",
+    SourceDir="/home/joq62/erlang/infra_2/sd/ebin",
+
+    PodNode='c1_0@c100',
+    PodDir="c1_0",
+    ApplDir=filename:join([ClusterDir,PodDir,Appl]),
+         
+    ok=service:load(PodNode,ClusterCookie,Appl,SourceDir,ApplDir),
+    ok=service:start(PodNode,ClusterCookie,Appl),
+    pong=dist_lib:cmd(PodNode,ClusterCookie,sd,ping,[],5000),
+    timer:sleep(3000),
+    ok=service:stop(PodNode,ClusterCookie,Appl),
+    {badrpc,_}=dist_lib:cmd(PodNode,ClusterCookie,sd,ping,[],5000),
+    service:unload(PodNode,ClusterCookie,ApplDir),
+    false=dist_lib:cmd(c1@c100,ClusterCookie,filelib,is_dir,[ApplDir],5000),
+
+    
+    
+
+  %  [true,true,true]=[delete_cluster_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)||HostName<-HostNames],
     
     
  
     %% Clean up
     
-    [true,true]=[dist_lib:stop_node(HostName,?ClId_1,?ClCookieStr_1)||HostName<-?HostNames],
+  
 
     init:stop(),
     ok.
@@ -164,6 +169,6 @@ setup()->
     ClusterNodeName=?ClId_1,
     ClusterDir=?ClId_1++".dir",
     ClusterCookie=?ClCookieStr_1,
-    [true,true]=[cluster:delete_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)||HostName<-?HostNames],
+    [true,true,true]=[cluster:delete_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)||HostName<-?HostNames],
 
     ok.

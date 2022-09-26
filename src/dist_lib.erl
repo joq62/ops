@@ -39,7 +39,7 @@
 
 -define(NODENAME,"ops").
 -define(TEMP_DIR,"temp_ops").
--define(SSH_TIMEOUT,5000).
+-define(SSH_TIMEOUT,8000).
 -define(Node(HostName),list_to_atom(?NODENAME++"@"++HostName)).
 
 %% --------------------------------------------------------------------
