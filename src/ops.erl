@@ -44,6 +44,17 @@
 
 
 -export([
+	 create_all_clusters/0,
+	 delete_all_clusters/0,
+	 create_cluster/1,
+	 delete_cluster/1,
+
+	 cluster_spec/0,
+	 deployment_spec/0
+
+	]).
+
+-export([
 	 start_ops_node/1,
 	 stop_ops_node/1,
 	 start_node/4,
@@ -82,17 +93,37 @@
 -export([init/1, handle_call/3,handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 %%-------------------------------------------------------------------
--record(state, {
+-record(state,{
+	       cluster_spec,
+	       deployment_spec
 	       }).
 
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
+
 appl_start([])->
     application:start(?MODULE).
+%% --------------------------------------------------------------------
+
+cluster_spec()->
+    gen_server:call(?MODULE,{cluster_spec},infinity).   
+deployment_spec()->
+    gen_server:call(?MODULE,{deployment_spec},infinity). 
 
 
+create_all_clusters()->
+    gen_server:call(?MODULE,{create_all_clusters},infinity).   
+delete_all_clusters()->
+    gen_server:call(?MODULE,{delete_all_clusters},infinity).   
+
+create_cluster(ClusterName)->
+    gen_server:call(?MODULE,{create_cluster,ClusterName},infinity).   
+delete_cluster(ClusterName)->
+    gen_server:call(?MODULE,{delete_cluster,ClusterName},infinity).   
+
+%% --------------------------------------------------------------------
 start_node(HostName,NodeName,Cookie,EnvArgs)->
     gen_server:call(?MODULE,{start_node,HostName,NodeName,Cookie,EnvArgs},infinity).   
 stop_node(HostName,NodeName,Cookie)->
@@ -150,16 +181,15 @@ ping()->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-    application:start(sd),
- %   application:start(nodelog),
-    application:start(config),
-    %create logdir and file
-    
 
-%    rpc:cast(node(),nodelog,log,[notice,?MODULE_STRING,?LINE,
-%				 {"OK, started server  ",?MODULE,node()}]), 
-    {ok, #state{}}.   
-  % {ok, #state{},0}.
+    ok=application:start(config),
+
+    ClusterSpec=cluster_data:read_cluster_spec(),
+    DeploymentSpec=cluster_data:read_deployment_spec(),
+    
+    {ok, #state{cluster_spec=ClusterSpec,
+		deployment_spec=DeploymentSpec}}.   
+ 
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
@@ -171,6 +201,27 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
+handle_call({create_all_clusters},_From, State) ->
+    Reply=cluster:create_all_clusters(State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({delete_all_clusters},_From, State) ->
+    Reply=cluster:cluster_all_names(State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({cluster_spec},_From, State) ->
+    Reply=cluster:cluster_all_names(State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({deployment_spec},_From, State) ->
+    Reply=cluster:deployment_all_names(State#state.deployment_spec),
+    {reply, Reply, State};
+
+ 
+%% --------------------------------------------------------------------
+
+
+
 
 handle_call({start_node,HostName,NodeName,Cookie,EnvArgs},_From, State) ->
     Reply=ops_lib:start_node(HostName,NodeName,Cookie,EnvArgs),

@@ -5,6 +5,7 @@
               {mod,{ops_app,[]}},
               {applications,[kernel,stdlib]},
               {env,[]},
-              {modules,[dist_lib,ops,ops_app,ops_lib,ops_sup]},
+              {modules,[cluster,cluster_data,dist_lib,ops,ops_app,ops_lib,
+                        ops_sup,pod,service]},
               {licenses,["Apache 2.0"]},
               {links,[]}]}.

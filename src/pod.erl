@@ -12,6 +12,10 @@
 -module(pod).   
  
 -export([
+	 node/3
+	]).
+
+-export([
 	 create/6,
 	 delete/4,
 	 available/3
@@ -27,6 +31,35 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+node(Key,Node,PodInfoStatusList)->
+    PodInfoList=[PodInfo||{_,PodInfo}<-PodInfoStatusList],
+    Info=[I||I<-PodInfoList,
+		       I#pod.node=:=node],   
+    case Info of
+	[]->
+	    {error,[node_eexists,Node]};
+        [I]->
+	    case Key of
+		hostname->
+		    I#pod.hostname;
+		node->
+		    I#pod.node;
+		name->
+		    I#pod.name;
+		dir->
+		    I#pod.dir;
+		Key ->
+		    {error,[key_eexists,Key]}
+	    end
+    end.
+
+
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()

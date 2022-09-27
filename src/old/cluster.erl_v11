@@ -15,55 +15,51 @@
 	 start/5,
 	 stop/4,
 
+	 create_all_clusters/1,
+
 	 create_node/4,
 	 delete_node/4,
 	 availble/3,
 	 not_availble/3,
 	 connect/3
 	]).
+		 
 
--export([
-	 hostname/3
-	]).
-
-
--record(cluster,{
-		 name,
-		 cookie,
-		 dir,
-		 hostname,
-		 num_pods,
-		 pods_info
-		}).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% -------------------------------------------------------------------
+create_all_clusters(ClusterSpec)->
+    StartedClusterNodes=create_clusters(ClusterSpec),
+    %StartedPods=create_pods(StartedClusterNodes,ClusterSpec),
+    StartedClusterNodes.
+
+
+
+create_clusters(ClusterSpec)->
+    AllClusterNameHost=cluster_data:clustera_all_names(ClusterSpec),
+    [NameHost||{ok,NameHost}<-create_cluster_node(AllClusterNameHost,ClusterSpec,[])].
+
+create_cluster_node([],_,Acc)->
+    Acc;
+create_cluster_node([NameHost|T],ClusterSpec,Acc)->
+    {ok,HostName}=cluster_data:cluster_spec(hostname,NameHost,ClusterSpec),
+    {ok,ClusterNodeName}=cluster_data:cluster_spec(name,NameHost,ClusterSpec),
+    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,NameHost,ClusterSpec),
+    {ok,ClusterDir}=cluster_data:cluster_spec(dir,NameHost,ClusterSpec),
+    {R,_}=create_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir),
+    create_cluster_node(T,ClusterSpec,[{R,NameHost}|Acc]).
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-% {ClusterNodeName,Cookie,ClusterDir,HostName,NumPods,PodsInfo}
-hostname(Key,HostName,ClusterInfoList)->
-    Info=[I||I<-ClusterInfoList,
-		       I#cluster.hostname=:=HostName],   
-    case Info of
-	[]->
-	    {error,[hostname_eexists,HostName]};
-        [I]->
-	    case Key of
-		cookie->
-		    I#cluster.cookie;
-		dir->
-		    I#cluster.dir;
-		num_pods->
-		    I#cluster.num_pods;
-		pods_info->
-		    I#cluster.pods_info;
-		Key ->
-		    {error,[key_eexists,Key]}
-	    end
-    end.
+
 
 
 %% --------------------------------------------------------------------
@@ -90,7 +86,7 @@ start([HostName|T],ClusterNodeName,ClusterCookie,ClusterDir,NumPodsPerHost,Acc)-
 		%	     PodArgs,list_to_atom(PodNodeName++"@"++HostName)}||PodNodeName<-PodNodeNames],
 		   PodNodeList=[pod:create(ClusterNode,ClusterCookie,HostName,PodNodeName,filename:join(ClusterDir,PodNodeName),PodArgs)||PodNodeName<-PodNodeNames],
 		   
-		   [#cluster{name=ClusterNodeName,cookie=ClusterCookie,dir=ClusterDir,hostname=HostName,num_pods=NumPodsPerHost,pods_info=PodNodeList}|Acc]
+		   [#cluster_spec{name=ClusterNodeName,cookie=ClusterCookie,dir=ClusterDir,hostname=HostName,num_pods=NumPodsPerHost,pods_info=PodNodeList}|Acc]
 	   end,
     start(T,ClusterNodeName,ClusterCookie,ClusterDir,NumPodsPerHost,NewAcc).    
 
