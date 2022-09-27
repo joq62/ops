@@ -15,6 +15,7 @@
 	 stop/4,
 
 	 create_all_clusters/1,
+	 delete_all_clusters/1,
 
 	 create_node/4,
 	 delete_node/4,
@@ -47,12 +48,43 @@ create_clusters(ClusterSpec)->
 create_cluster_node([],_,Acc)->
     Acc;
 create_cluster_node([NameHost|T],ClusterSpec,Acc)->
+    io:format(" Progress  ~p~n",[{?FUNCTION_NAME,NameHost}]),
+    
     {ok,HostName}=cluster_data:cluster_spec(hostname,NameHost,ClusterSpec),
     {ok,ClusterNodeName}=cluster_data:cluster_spec(name,NameHost,ClusterSpec),
     {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,NameHost,ClusterSpec),
     {ok,ClusterDir}=cluster_data:cluster_spec(dir,NameHost,ClusterSpec),
     {R,_}=create_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir),
     create_cluster_node(T,ClusterSpec,[{R,NameHost}|Acc]).
+
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% -------------------------------------------------------------------
+delete_all_clusters(ClusterSpec)->
+    StartedClusterNodes=delete_clusters(ClusterSpec),
+    %StartedPods=create_pods(StartedClusterNodes,ClusterSpec),
+    StartedClusterNodes.
+
+
+
+delete_clusters(ClusterSpec)->
+    AllClusterNameHost=cluster_data:clustera_all_names(ClusterSpec),
+    [NameHost||{ok,NameHost}<-delete_cluster_node(AllClusterNameHost,ClusterSpec,[])].
+
+delete_cluster_node([],_,Acc)->
+    Acc;
+delete_cluster_node([NameHost|T],ClusterSpec,Acc)->
+    io:format(" Progress  ~p~n",[{?FUNCTION_NAME,NameHost}]),
+
+    {ok,HostName}=cluster_data:cluster_spec(hostname,NameHost,ClusterSpec),
+    {ok,ClusterNodeName}=cluster_data:cluster_spec(name,NameHost,ClusterSpec),
+    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,NameHost,ClusterSpec),
+    {ok,ClusterDir}=cluster_data:cluster_spec(dir,NameHost,ClusterSpec),
+    R=delete_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir),
+    delete_cluster_node(T,ClusterSpec,[{R,NameHost}|Acc]).
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible

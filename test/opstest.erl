@@ -57,6 +57,11 @@ start()->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
 create_all()->
+    Create=ops:create_all_clusters(),
+    io:format("Create ~p~n",[Create]),
+
+    Delete=ops:delete_all_clusters(),
+    io:format("Delete ~p~n",[Delete]),
     
     ok.
     
