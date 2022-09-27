@@ -206,15 +206,15 @@ handle_call({create_all_clusters},_From, State) ->
     {reply, Reply, State};
 
 handle_call({delete_all_clusters},_From, State) ->
-    Reply=cluster:cluster_all_names(State#state.cluster_spec),
+    Reply=cluster:delete_all_clusters(State#state.cluster_spec),
     {reply, Reply, State};
 
 handle_call({cluster_spec},_From, State) ->
-    Reply=cluster:cluster_all_names(State#state.cluster_spec),
+    Reply=cluster_data:cluster_all_names(State#state.cluster_spec),
     {reply, Reply, State};
 
 handle_call({deployment_spec},_From, State) ->
-    Reply=cluster:deployment_all_names(State#state.deployment_spec),
+    Reply=cluster_data:deployment_all_names(State#state.deployment_spec),
     {reply, Reply, State};
 
  

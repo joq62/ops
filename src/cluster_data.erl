@@ -250,19 +250,21 @@ pod_hostname(Key,HostName,PodInfo)->
     Result=case R of
 	       []->
 		   {error,[eexists,HostName]};
-	       [X]->
+	       _->
 		   case Key of
-		       node->
-			   X#pod_info.node;
-		       name->
-			   X#pod_info.name;
-		       dir->
-			   X#pod_info.dir;
+		       name_dir->
+			   [{X#pod_info.name,X#pod_info.dir}||X<-R];
 		       Eexists->
 			   {error,[eexists,Eexists]}
 		   end
 	   end,
-       Result.
+    case Result of
+	{error,Reason}->
+	    {error,Reason};
+	_ ->
+	    {ok,Result}
+    end.
+
 
 pod_node(Key,Node,PodInfo)->
     R=[I||I<-PodInfo,

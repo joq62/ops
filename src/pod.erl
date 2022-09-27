@@ -86,7 +86,7 @@ create(ClusterNode,ClusterCookie,HostName,PodNodeName,PodDir,Args)->
 					   dist_lib:rmdir_r(ClusterNode,ClusterCookie,PodDir),
 					   {error,[failed_to_connect,PodNode]};
 				       pong->
-					   {ok,#pod{hostname=HostName,node=PodNode,name=PodNodeName,dir=PodDir}}
+					   {ok,{HostName,PodNode}}
 				   end
 			   end
 		   end

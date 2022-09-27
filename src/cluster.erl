@@ -36,20 +36,26 @@
 %% -------------------------------------------------------------------
 create_all_clusters(ClusterSpec)->
     StartedClusterNodes=create_clusters(ClusterSpec),
-    %StartedPods=create_pods(StartedClusterNodes,ClusterSpec),
+    StartedPods=create_pods(StartedClusterNodes,ClusterSpec),
     StartedClusterNodes.
 
-
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% -------------------------------------------------------------------
 
 create_clusters(ClusterSpec)->
-    AllClusterNameHost=cluster_data:clustera_all_names(ClusterSpec),
-    [NameHost||{ok,NameHost}<-create_cluster_node(AllClusterNameHost,ClusterSpec,[])].
+    AllClusterNameHost=cluster_data:cluster_all_names(ClusterSpec),
+    StartedClusterNodes=[NameHost||{ok,NameHost}<-create_cluster_node(AllClusterNameHost,ClusterSpec,[])],
+    Ping=connect_cluster_nodes(StartedClusterNodes,ClusterSpec),
+    io:format(" Ping  ~p~n",[{?FUNCTION_NAME,Ping}]),
+    StartedClusterNodes.
 
 create_cluster_node([],_,Acc)->
     Acc;
 create_cluster_node([NameHost|T],ClusterSpec,Acc)->
     io:format(" Progress  ~p~n",[{?FUNCTION_NAME,NameHost}]),
-    
     {ok,HostName}=cluster_data:cluster_spec(hostname,NameHost,ClusterSpec),
     {ok,ClusterNodeName}=cluster_data:cluster_spec(name,NameHost,ClusterSpec),
     {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,NameHost,ClusterSpec),
@@ -57,6 +63,63 @@ create_cluster_node([NameHost|T],ClusterSpec,Acc)->
     {R,_}=create_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir),
     create_cluster_node(T,ClusterSpec,[{R,NameHost}|Acc]).
 
+connect_cluster_nodes(StartedClusterNodes,ClusterSpec)->
+    NodeInfoList=[{Node,Cookie}||{{ok,Node},
+				  {ok,Cookie}}<-[{cluster_data:cluster_spec(node,NameHost,ClusterSpec),
+						  cluster_data:cluster_spec(cookie,NameHost,ClusterSpec)}||NameHost<-StartedClusterNodes]],
+    
+    [{Node1,Node2,dist_lib:cmd(Node1,Cookie1,net_adm,ping,[Node2],5000)}||{Node1,Cookie1}<-NodeInfoList,
+									  {Node2,Cookie2}<-NodeInfoList,
+									  Cookie1=:=Cookie2].
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% -------------------------------------------------------------------
+create_pods(StartedClusterNodes,ClusterSpec)->
+    PodInfoList=[{NameHost,PodInfo}||{NameHost,
+			     {ok,PodInfo}}<-[{NameHost,
+					      cluster_data:cluster_spec(pods_info,NameHost,ClusterSpec)}||NameHost<-StartedClusterNodes]],
+    
+  %  PodInfoList=p2(P1,[]),
+   % io:format(" PodInfoList  ~p~n",[{?FUNCTION_NAME,PodInfoList}]),
+    PodStart=create_pod_node(PodInfoList,ClusterSpec,[]),
+    io:format(" PodStart  ~p~n",[{?FUNCTION_NAME,PodStart}]),
+    PodStart.
+   
+
+
+p2([],Acc)->
+    lists:append(Acc);
+p2([{NameHost,PodInfoList}|T],Acc) ->
+    X=[{NameHost,PodInfo}||PodInfo<-PodInfoList],
+    p2(T,[X|Acc]).
+
+create_pod_node([],_,Acc)->
+    Acc;
+create_pod_node([{NameHost,PodInfoList}|T],ClusterSpec,Acc)->
+
+    {ok,ClusterNode}=cluster_data:cluster_spec(node,NameHost,ClusterSpec),
+    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,NameHost,ClusterSpec),  
+    {ok,HostName}=cluster_data:cluster_spec(hostname,NameHost,ClusterSpec),
+
+    {ok,NameDirList}=cluster_data:pod_hostname(name_dir,HostName,PodInfoList),
+ %   io:format(" NameDirList  ~p~n",[{?FUNCTION_NAME,NameDirList}]),
+    Args="-setcookie "++ClusterCookie,
+    io:format(" Progress  ~p~n",[{?FUNCTION_NAME,NameHost,NameDirList}]),
+    R=[pod:create(ClusterNode,ClusterCookie,HostName,PodNodeName,PodDir,Args)||{PodNodeName,PodDir}<-NameDirList],
+%    io:format(" Check nodes  ~p~n",[{?FUNCTION_NAME,ClusterNode, dist_lib:cmd(ClusterNode,ClusterCookie,erlang,nodes,[],5000)}]),
+    create_pod_node(T,ClusterSpec,[{R,NameHost}|Acc]).
+
+connect_pod_nodes(StartedClusterNodes,ClusterSpec)->
+    NodeInfoList=[{Node,Cookie}||{{ok,Node},
+				  {ok,Cookie}}<-[{cluster_data:cluster_spec(node,NameHost,ClusterSpec),
+						  cluster_data:cluster_spec(cookie,NameHost,ClusterSpec)}||NameHost<-StartedClusterNodes]],
+    
+    [{Node1,Node2,dist_lib:cmd(Node1,Cookie1,net_adm,ping,[Node2],5000)}||{Node1,Cookie1}<-NodeInfoList,
+									  {Node2,Cookie2}<-NodeInfoList,
+									  Cookie1=:=Cookie2].
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -64,14 +127,13 @@ create_cluster_node([NameHost|T],ClusterSpec,Acc)->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% -------------------------------------------------------------------
 delete_all_clusters(ClusterSpec)->
-    StartedClusterNodes=delete_clusters(ClusterSpec),
-    %StartedPods=create_pods(StartedClusterNodes,ClusterSpec),
-    StartedClusterNodes.
+    DeletedClusterNodes=delete_clusters(ClusterSpec),
+    DeletedClusterNodes.
 
 
 
 delete_clusters(ClusterSpec)->
-    AllClusterNameHost=cluster_data:clustera_all_names(ClusterSpec),
+    AllClusterNameHost=cluster_data:cluster_all_names(ClusterSpec),
     [NameHost||{ok,NameHost}<-delete_cluster_node(AllClusterNameHost,ClusterSpec,[])].
 
 delete_cluster_node([],_,Acc)->
