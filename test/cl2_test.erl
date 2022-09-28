@@ -9,7 +9,7 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(cl_test).   
+-module(cl2_test).   
  
 -export([start/0]).
 %% --------------------------------------------------------------------
@@ -43,12 +43,13 @@ start()->
     ok=setup(),
 
     ok=cluster_start_test(),
-    
     ok=pod_start_test(),
-    
+    ok=pod_stop_test(),
     ok=cluster_stop_test(),
            
     io:format("Test OK !!! ~p~n",[?MODULE]),
+
+    timer:sleep(3000),
     init:stop(),
     ok.
 
@@ -59,29 +60,56 @@ start()->
 %% --------------------------------------------------------------------
 pod_start_test()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
+    
     AllClusterNames=lists:sort(cluster:cluster_names()),    
     AllPodNames=lists:sort([{HostName,ClusterName,cluster:pod_names(HostName,ClusterName)}||{HostName,ClusterName}<-AllClusterNames]),
-    [{"c100","c1",["c1_0","c1_1","c1_2","c1_3"]},
-     {"c100","c2",["c2_0","c2_1","c2_2"]},
-     {"c200","c1",["c1_0","c1_1","c1_2","c1_3"]},
-     {"c201","c1",["c1_0","c1_1","c1_2","c1_3"]}]=AllPodNames,
-
-    HostName1="c100",
-    ClusterName1="c1",
-    PodName1="c1_0",
-
-    false=cluster:is_pod_node_present(HostName1,ClusterName1,PodName1),
-    PodStart1=cluster:start_pod_node(HostName1,ClusterName1,PodName1),
-    {ok,{"c100",c1_0@c100}}=PodStart1,
-    %io:format("PodStart1 ~p~n",[PodStart1]),
-    true=cluster:is_pod_node_present(HostName1,ClusterName1,PodName1),
-    PodStop1=cluster:stop_pod_node(HostName1,ClusterName1,PodName1),
-    true=PodStop1,
-    false=cluster:is_pod_node_present(HostName1,ClusterName1,PodName1),
-
+     R=[start_pod(HostName,ClusterName,PodNameList)||{HostName,ClusterName,PodNameList}<-AllPodNames],
+    Result=lists:sort(lists:append(R)),
+    [{ok,{"c100",c1_0@c100}},
+     {ok,{"c100",c1_1@c100}},
+     {ok,{"c100",c1_2@c100}},
+     {ok,{"c100",c1_3@c100}},
+     {ok,{"c100",c2_0@c100}},
+     {ok,{"c100",c2_1@c100}},
+     {ok,{"c100",c2_2@c100}},
+     {ok,{"c200",c1_0@c200}},
+     {ok,{"c200",c1_1@c200}},
+     {ok,{"c200",c1_2@c200}},
+     {ok,{"c200",c1_3@c200}},
+     {ok,{"c201",c1_0@c201}},
+     {ok,{"c201",c1_1@c201}},
+     {ok,{"c201",c1_2@c201}},
+     {ok,{"c201",c1_3@c201}}]=Result,
+    
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
     ok.
     
+start_pod(HostName,ClusterName,PodNameList)->
+    [cluster:start_pod_node(HostName,ClusterName,PodName)||PodName<-PodNameList].
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+pod_stop_test()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+    
+    AllClusterNames=lists:sort(cluster:cluster_names()),    
+    AllPodNames=lists:sort([{HostName,ClusterName,cluster:pod_names(HostName,ClusterName)}||{HostName,ClusterName}<-AllClusterNames]),
+    R=[stop_pod(HostName,ClusterName,PodNameList)||{HostName,ClusterName,PodNameList}<-AllPodNames],
+    Result=lists:sort(lists:append(R)),
+    [{true,"c100","c1","c1_0"},{true,"c100","c1","c1_1"},{true,"c100","c1","c1_2"},
+     {true,"c100","c1","c1_3"},{true,"c100","c2","c2_0"},{true,"c100","c2","c2_1"},
+     {true,"c100","c2","c2_2"},{true,"c200","c1","c1_0"},{true,"c200","c1","c1_1"},
+     {true,"c200","c1","c1_2"},{true,"c200","c1","c1_3"},{true,"c201","c1","c1_0"},
+     {true,"c201","c1","c1_1"},{true,"c201","c1","c1_2"},{true,"c201","c1","c1_3"}]=Result,
+    
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
+stop_pod(HostName,ClusterName,PodNameList)->
+    [{cluster:stop_pod_node(HostName,ClusterName,PodName),HostName,ClusterName,PodName}||PodName<-PodNameList].
+
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
@@ -89,21 +117,11 @@ pod_start_test()->
 %% --------------------------------------------------------------------
 cluster_start_test()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
-    AllClusterNames=lists:sort(cluster:cluster_names()),
-    Presence1=[{HostName,ClusterName,cluster:is_cluster_node_present(HostName,ClusterName)}||{HostName,ClusterName}<-AllClusterNames],
-  
-    StartAll=[{HostName,ClusterName,cluster:start_cluster_node(HostName,ClusterName)}||{HostName,ClusterName}<-AllClusterNames],
-       
-    %% Kill one
-
-    HostName1="c100",
-    ClusterName1="c1",
-    ok=cluster:stop_cluster_node(HostName1,ClusterName1),
-    false=cluster:is_cluster_node_present(HostName1,ClusterName1),
-    timer:sleep(3000),
-    {ok,_}=cluster:start_cluster_node(HostName1,ClusterName1),
-    true=cluster:is_cluster_node_present(HostName1,ClusterName1),
     
+    AllClusterNames=lists:sort(cluster:cluster_names()),
+    [cluster:start_cluster_node(HostName,ClusterName)||{HostName,ClusterName}<-AllClusterNames],
+    [true,true,true,true]=[cluster:is_cluster_node_present(HostName,ClusterName)||{HostName,ClusterName}<-AllClusterNames],   
+         
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
     ok.
    
@@ -119,6 +137,7 @@ cluster_stop_test()->
     AllClusterNames=lists:sort(cluster:cluster_names()),
     StopAll=[{cluster:stop_cluster_node(HostName,ClusterName),HostName,ClusterName}||{HostName,ClusterName}<-AllClusterNames],
     [{ok,"c100","c1"},{ok,"c100","c2"},{ok,"c200","c1"},{ok,"c201","c1"}]=StopAll,
+    
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
     ok.
 
@@ -134,7 +153,7 @@ setup()->
     ok=application:start(ops),
     pong=cluster:ping(),
     AllClusterNames=lists:sort(cluster:cluster_names()),
-    [{HostName,ClusterName,cluster:stop_cluster_node(HostName,ClusterName)}||{HostName,ClusterName}<-AllClusterNames],
+    [cluster:stop_cluster_node(HostName,ClusterName)||{HostName,ClusterName}<-AllClusterNames],
     
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
 

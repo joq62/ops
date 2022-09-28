@@ -30,7 +30,9 @@ init([]) ->
                  intensity => 0,
                  period => 1},
     ChildSpecs = [#{id=>ops,
-		    start=>{ops,start,[]}}],
+		    start=>{ops,start,[]}},
+		  #{id=>cluster,
+		    start=>{cluster,start,[]}}],
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions

@@ -9,25 +9,17 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(pod).   
+-module(pod_lib).   
  
 -export([
-	 node/3
-	]).
 
--export([
-	 create/6,
-	 delete/4,
-	 available/3
+	 is_node_present/4,
+	 start_node/4,
+	 stop_node/4
+	 
 	]).
+		 
 
--record(pod,{
-	     hostname,
-	     node,
-	     name,
-	     dir
-	    }).
-	     
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
@@ -36,35 +28,46 @@
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-node(Key,Node,PodInfoStatusList)->
-    PodInfoList=[PodInfo||{_,PodInfo}<-PodInfoStatusList],
-    Info=[I||I<-PodInfoList,
-		       I#pod.node=:=node],   
-    case Info of
-	[]->
-	    {error,[node_eexists,Node]};
-        [I]->
-	    case Key of
-		hostname->
-		    I#pod.hostname;
-		node->
-		    I#pod.node;
-		name->
-		    I#pod.name;
-		dir->
-		    I#pod.dir;
-		Key ->
-		    {error,[key_eexists,Key]}
-	    end
-    end.
-
-
+%% -------------------------------------------------------------------
+is_node_present(HostName,ClusterName,PodName,ClusterSpec)->
+    Result=case cluster_data:pod_by_name(HostName,ClusterName,PodName,ClusterSpec) of
+	       {error,Reason}->
+		   {error,Reason};
+	       {ok,PodsInfo}->
+		   PodNode=cluster_data:pod(node,PodsInfo),
+		   {ok,Cookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+		   case dist_lib:ping(node(),Cookie,PodNode) of
+		       pang->
+			   false;
+		       pong->
+			   true
+		   end
+	   end,
+    Result.
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% -------------------------------------------------------------------
+start_node(HostName,ClusterName,PodName,ClusterSpec)->
+    Result=case cluster_data:pod_by_name(HostName,ClusterName,PodName,ClusterSpec) of
+	       {error,Reason}->
+		   {error,Reason};
+	       {ok,PodsInfo}->
+		   {ok,ClusterNode}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
+		   {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+		   Args=" -setcookie "++ClusterCookie,
+		   case cluster_data:pod(dir,PodsInfo) of
+		       {error,Reason}->
+			   {error,Reason};
+		       PodDir->
+			   create(ClusterNode,ClusterCookie,HostName,PodName,PodDir,Args)
+		   end
+	   end,
+    Result.
+
+%% --------------------------------------------------------------------
 %% --------------------------------------------------------------------
 create(ClusterNode,ClusterCookie,HostName,PodNodeName,PodDir,Args)-> 
     dist_lib:rmdir_r(ClusterNode,ClusterCookie,PodDir),
@@ -97,21 +100,28 @@ create(ClusterNode,ClusterCookie,HostName,PodNodeName,PodDir,Args)->
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
+%% -------------------------------------------------------------------
+stop_node(HostName,ClusterName,PodName,ClusterSpec)->
+    Result=case cluster_data:pod_by_name(HostName,ClusterName,PodName,ClusterSpec) of
+	       {error,Reason}->
+		   {error,Reason};
+	       {ok,PodsInfo}->
+		   case cluster_data:pod(dir,PodsInfo) of
+		       {error,Reason}->
+			   {error,Reason};
+		       PodDir->
+			   {ok,ClusterNode}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
+			   {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+			   dist_lib:rmdir_r(ClusterNode,ClusterCookie,PodDir),
+			   dist_lib:stop_node(HostName,PodName,ClusterCookie)
+		   end
+	   end,
+    Result.
 
-delete(ClusterNode,ClusterCookie,PodNode,PodDir)->
-    dist_lib:rmdir_r(ClusterNode,ClusterCookie,PodDir),
-    dist_lib:cmd(ClusterNode,ClusterCookie,slave,stop,[PodNode],5000).
+
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-available(HostNames,ClusterNodeName,ClusterCookie)->
-    ClusterNodes=cluster:availble(HostNames,ClusterNodeName,ClusterCookie),
-    [ClusterNode|_]=ClusterNodes,
-    AllNodes=dist_lib:cmd(ClusterNode,ClusterCookie,erlang,nodes,[],5000),
-    [N||N<-AllNodes,
-	false=:=lists:member(N,ClusterNodes)].
-

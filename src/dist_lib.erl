@@ -17,7 +17,8 @@
 
 	 start_node/4,
 	 stop_node/3,
-
+	 
+	 ping/3,
 	 cmd/6,
 	 mkdir/3,
 	 rmdir/3,
@@ -69,7 +70,12 @@ start_node(HostName,NodeName,Cookie,EnvArgs)->
 	       _Return->
 %		  io:format("Return ~p~n",[Return]),
      		  CreatedNode=list_to_atom(NodeName++"@"++HostName),
-		  vm:check_started_node(CreatedNode)
+		  case vm:check_started_node(CreatedNode) of
+		       {error,Reason}->
+			  {error,[Reason,HostName,NodeName,Cookie]};
+		      true ->
+			  {ok,CreatedNode}
+		  end
 	  end,
     
     erlang:set_cookie(node(),CurrentCookie),
@@ -192,14 +198,14 @@ rmdir(Node,Cookie,DirName)->
 rmdir_r(Node,Cookie,DirName)->
     CurrentCookie=erlang:get_cookie(),
     erlang:set_cookie(node(),list_to_atom(Cookie)),
-    Reply=case  rpc:call(Node,file,get_cwd,[],5000) of
+    Reply=case rpc:call(Node,file,get_cwd,[],5000) of
 	      {error,Reason}->
 		  {error,[Reason]};
 	      {badrpc,Reason}->
 		  {error,[badrpc,Reason]};
-		      {ok,Cwd}->
+	      {ok,Cwd}->
 		  FullDirName=filename:join(Cwd,DirName),
-		  rpc:call(Node,os,cmd,["rm -rf "++FullDirName],5000)
+		  rpc:call(Node,os,cmd,["rm -rf "++FullDirName],5000)		  
 	  end,
     erlang:set_cookie(node(),CurrentCookie),
     
@@ -258,3 +264,9 @@ rm_file(Node,Cookie, Dir,FileName)->
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
+ping(Node,Cookie,NodeToPing)->
+    CurrentCookie=erlang:get_cookie(),
+    erlang:set_cookie(node(),list_to_atom(Cookie)),
+    Result=rpc:call(Node,net_adm,ping,[NodeToPing],5000),
+    erlang:set_cookie(node(),CurrentCookie),
+    Result.

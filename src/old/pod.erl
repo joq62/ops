@@ -7,7 +7,7 @@
 %%% 
 %%% Created : 10 dec 2012
 %%% -------------------------------------------------------------------
--module(cluster).
+-module(pod).
  
 -behaviour(gen_server).
 
@@ -43,24 +43,15 @@
 % read nodelog on node
 
 -export([
-	 is_cluster_node_present/2,
-	 start_cluster_node/2,
-	 stop_cluster_node/2,
+	 is_node_present/3,
+	 start_node/3,
+	 stop_node/3,
 
 	 % Admin
-	 cluster_names/0
+	 names/2
 
 	]).
 
--export([
-	 is_pod_node_present/3,
-	 start_pod_node/3,
-	 stop_pod_node/3,
-
-	 % Admin
-	 pod_names/2
-
-	]).
 
 -export([
 	 start/0,
@@ -90,32 +81,21 @@
 appl_start([])->
     application:start(?MODULE).
 %% --------------------------------------------------------------------
-  
-is_cluster_node_present(HostName,ClusterName)->
-    gen_server:call(?MODULE,{is_cluster_node_present,HostName,ClusterName},infinity).  
-start_cluster_node(HostName,ClusterName)->
-    gen_server:call(?MODULE,{start_cluster_node,HostName,ClusterName},infinity).   
-stop_cluster_node(HostName,ClusterName)->
-    gen_server:call(?MODULE,{stop_cluster_node,HostName,ClusterName},infinity).   
 
-cluster_names()->
-    gen_server:call(?MODULE,{cluster_names},infinity).   
+is_node_present(HostName,ClusterName,PodName)->
+    gen_server:call(?MODULE,{is_node_present,HostName,ClusterName,PodName},infinity).  
+start_node(HostName,ClusterName,PodName)->
+    gen_server:call(?MODULE,{start_node,HostName,ClusterName,PodName},infinity).   
+stop_node(HostName,ClusterName,PodName)->
+    gen_server:call(?MODULE,{stop_node,HostName,ClusterName,PodName},infinity).   
 
-%% --------------------------------------------------------------------
-
-is_pod_node_present(HostName,ClusterName,PodName)->
-    gen_server:call(?MODULE,{is_pod_node_present,HostName,ClusterName,PodName},infinity).  
-start_pod_node(HostName,ClusterName,PodName)->
-    gen_server:call(?MODULE,{start_pod_node,HostName,ClusterName,PodName},infinity).   
-stop_pod_node(HostName,ClusterName,PodName)->
-    gen_server:call(?MODULE,{stop_pod_node,HostName,ClusterName,PodName},infinity).   
-
-pod_names(HostName,ClusterName)->
-    gen_server:call(?MODULE,{pod_names,HostName,ClusterName},infinity).  
+names(HostName,ClusterName)->
+    gen_server:call(?MODULE,{names,HostName,ClusterName},infinity).   
 
 
 %% --------------------------------------------------------------------
 
+%% call
 start()-> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 stop()-> gen_server:call(?MODULE, {stop},infinity).
 
@@ -156,52 +136,21 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 
-handle_call({cluster_names},_From, State) ->
-    Reply=cluster_data:cluster_all_names(State#state.cluster_spec),
-    {reply, Reply, State};
-
-handle_call({is_cluster_node_present,HostName,ClusterName},_From, State) ->
-    Reply=cluster_lib:is_node_present(HostName,ClusterName,State#state.cluster_spec),
-    {reply, Reply, State};
-
-handle_call({start_cluster_node,HostName,ClusterName},_From, State) ->
-    Reply=cluster_lib:start_node(HostName,ClusterName,State#state.cluster_spec),
-    {reply, Reply, State};
-
-handle_call({stop_cluster_node,HostName,ClusterName},_From, State) ->
-    Reply=cluster_lib:stop_node(HostName,ClusterName,State#state.cluster_spec),
-    {reply, Reply, State};
-%% --------------------------------------------------------------------
-
-handle_call({pod_names,HostName,ClusterName},_From, State) ->
+handle_call({names,HostName,ClusterName},_From, State) ->
     Reply=cluster_data:pod_all_names(HostName,ClusterName,State#state.cluster_spec),
     {reply, Reply, State};
 
-handle_call({is_pod_node_present,HostName,ClusterName,PodName},_From, State) ->
+handle_call({is_node_present,HostName,ClusterName,PodName},_From, State) ->
     Reply=pod_lib:is_node_present(HostName,ClusterName,PodName,State#state.cluster_spec),
     {reply, Reply, State};
 
-handle_call({start_pod_node,HostName,ClusterName,PodName},_From, State) ->
+handle_call({start_node,HostName,ClusterName,PodName},_From, State) ->
     Reply=pod_lib:start_node(HostName,ClusterName,PodName,State#state.cluster_spec),
     {reply, Reply, State};
 
-handle_call({stop_pod_node,HostName,ClusterName,PodName},_From, State) ->
+handle_call({stop_node,HostName,ClusterName,PodName},_From, State) ->
     Reply=pod_lib:stop_node(HostName,ClusterName,PodName,State#state.cluster_spec),
     {reply, Reply, State};
-
-%% --------------------------------------------------------------------
-
-handle_call({cluster_spec},_From, State) ->
-    Reply=cluster_data:cluster_all_names(State#state.cluster_spec),
-    {reply, Reply, State};
-
-handle_call({deployment_spec},_From, State) ->
-    Reply=cluster_data:deployment_all_names(State#state.deployment_spec),
-    {reply, Reply, State};
-
- 
-%% --------------------------------------------------------------------
-
 
 handle_call({ping},_From, State) ->
     Reply=pong,

@@ -184,11 +184,9 @@ init([]) ->
 
     ok=application:start(config),
 
-    ClusterSpec=cluster_data:read_cluster_spec(),
-    DeploymentSpec=cluster_data:read_deployment_spec(),
-    
-    {ok, #state{cluster_spec=ClusterSpec,
-		deployment_spec=DeploymentSpec}}.   
+      
+    {ok, #state{cluster_spec=[],
+		deployment_spec=[]}}.   
  
 
 %% --------------------------------------------------------------------
