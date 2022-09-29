@@ -306,15 +306,6 @@ pod(Key,PodInfo)->
 	   end,
     Result.
 
-pod_all_names(HostName,ClusterName,ClusterSpec)->
-    Result=case cluster_data:cluster_spec(pods_info,HostName,ClusterName,ClusterSpec) of
-	       {error,Reason}->
-		   {error,Reason};
-	       {ok,PodsInfoList}->
-		   [cluster_data:pod(name,PodInfo)||PodInfo<-PodsInfoList]
-	   end,
-    Result.
-
 pod_by_name(HostName,ClusterName,PodName,ClusterSpec)->
      Result=case cluster_data:cluster_spec(pods_info,HostName,ClusterName,ClusterSpec) of
 	       {error,Reason}->
@@ -331,7 +322,26 @@ pod_by_name(HostName,ClusterName,PodName,ClusterSpec)->
 	    end,
     Result.
 			   
-	 
+pod_all_names(HostName,ClusterName,ClusterSpec)->
+    Result=case cluster_data:cluster_spec(pods_info,HostName,ClusterName,ClusterSpec) of
+	       {error,Reason}->
+		   {error,Reason};
+	       {ok,PodsInfoList}->
+		   %io:format("PodsInfoList ~p~n",[{?FUNCTION_NAME,PodsInfoList}]),
+		   PodNameList=[cluster_data:pod(name,PodInfo)||PodInfo<-PodsInfoList],
+		   do_pod_name_list(HostName,ClusterName,PodNameList,[])
+	   end,
+    Result.
+
+
+do_pod_name_list(_HostName,_ClusterName,[],Acc)->
+    Acc;
+do_pod_name_list(HostName,ClusterName,[PodName|T],Acc)->
+  %  io:format("PodName ~p~n",[{?FUNCTION_NAME,PodName}]),
+    NewAcc=[{HostName,ClusterName,PodName}|Acc],
+    do_pod_name_list(HostName,ClusterName,T,NewAcc).
+
+
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible

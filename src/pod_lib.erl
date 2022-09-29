@@ -34,6 +34,7 @@ is_node_present(HostName,ClusterName,PodName,ClusterSpec)->
 	       {error,Reason}->
 		   {error,Reason};
 	       {ok,PodsInfo}->
+		   %io:format("PodsInfo ~p~n",[{?FUNCTION_NAME,?LINE,PodsInfo}]),
 		   PodNode=cluster_data:pod(node,PodsInfo),
 		   {ok,Cookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
 		   case dist_lib:ping(node(),Cookie,PodNode) of
@@ -94,6 +95,7 @@ create(ClusterNode,ClusterCookie,HostName,PodNodeName,PodDir,Args)->
 			   end
 		   end
 	   end,
+  %  io:format("Result ~p~n",[{Result, ?MODULE,?FUNCTION_NAME}]),
     Result.
 
 %% --------------------------------------------------------------------

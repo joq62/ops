@@ -67,17 +67,18 @@ start_node(HostName,NodeName,Cookie,EnvArgs)->
 	     % {badrpc,timeout}-> retry X times       
 	       {badrpc,Reason}->
 		   {error,[{?MODULE,?LINE," ",badrpc,Reason}]};
-	       _Return->
-%		  io:format("Return ~p~n",[Return]),
+	      {error,Reason}->
+		  {error,[Reason]};
+	      ok->
      		  CreatedNode=list_to_atom(NodeName++"@"++HostName),
 		  case vm:check_started_node(CreatedNode) of
-		       {error,Reason}->
-			  {error,[Reason,HostName,NodeName,Cookie]};
+		      false->
+			  {error,[couldnt_start_node,CreatedNode,Cookie]};
 		      true ->
 			  {ok,CreatedNode}
 		  end
 	  end,
-    
+    io:format("Reply ~p~n",[{Reply, ?FUNCTION_NAME}]),
     erlang:set_cookie(node(),CurrentCookie),
     Reply.
    
