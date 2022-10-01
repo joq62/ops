@@ -43,9 +43,12 @@
 % read nodelog on node
 
 -export([
+	 all_services/1,
 	 is_cluster_node_present/2,
 	 start_cluster_node/2,
 	 stop_cluster_node/2,
+	 intent_cluster/0,
+	 intent_cluster/1,
 
 	 % Admin
 	 cluster_names/0
@@ -56,6 +59,8 @@
 	 is_pod_node_present/3,
 	 start_pod_node/3,
 	 stop_pod_node/3,
+	 intent_pods/0,
+	 intent_pods/1,
 
 	 % Admin
 	 pod_names/2
@@ -91,6 +96,9 @@ appl_start([])->
     application:start(?MODULE).
 %% --------------------------------------------------------------------
   
+
+all_services(ClusterName)->
+    gen_server:call(?MODULE,{all_services,ClusterName},infinity).  
 is_cluster_node_present(HostName,ClusterName)->
     gen_server:call(?MODULE,{is_cluster_node_present,HostName,ClusterName},infinity).  
 start_cluster_node(HostName,ClusterName)->
@@ -101,6 +109,11 @@ stop_cluster_node(HostName,ClusterName)->
 cluster_names()->
     gen_server:call(?MODULE,{cluster_names},infinity).   
 
+intent_cluster()->
+    gen_server:call(?MODULE,{intent_cluster},infinity).  
+intent_cluster(ClusterName)->
+    gen_server:call(?MODULE,{intent_cluster,ClusterName},infinity).  
+
 %% --------------------------------------------------------------------
 
 is_pod_node_present(HostName,ClusterName,PodName)->
@@ -109,9 +122,13 @@ start_pod_node(HostName,ClusterName,PodName)->
     gen_server:call(?MODULE,{start_pod_node,HostName,ClusterName,PodName},infinity).   
 stop_pod_node(HostName,ClusterName,PodName)->
     gen_server:call(?MODULE,{stop_pod_node,HostName,ClusterName,PodName},infinity).   
-
 pod_names(HostName,ClusterName)->
     gen_server:call(?MODULE,{pod_names,HostName,ClusterName},infinity).  
+
+intent_pods()->
+    gen_server:call(?MODULE,{intent_pods},infinity).  
+intent_pods(ClusterName)->
+    gen_server:call(?MODULE,{intent_pods,ClusterName},infinity).  
 
 
 %% --------------------------------------------------------------------
@@ -156,6 +173,19 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 
+
+handle_call({all_services,ClusterName},_From, State) ->
+    Reply=cluster_lib:all_services(ClusterName,State#state.cluster_spec),   
+    {reply, Reply, State};
+
+handle_call({intent_cluster,ClusterName},_From, State) ->
+    Reply=cluster_lib:intent(ClusterName,State#state.cluster_spec),   
+    {reply, Reply, State};
+
+handle_call({intent_cluster},_From, State) ->
+    Reply=cluster_lib:intent(State#state.cluster_spec),   
+    {reply, Reply, State};
+
 handle_call({cluster_names},_From, State) ->
     Reply=cluster_data:cluster_all_names(State#state.cluster_spec),
     {reply, Reply, State};
@@ -172,6 +202,14 @@ handle_call({stop_cluster_node,HostName,ClusterName},_From, State) ->
     Reply=cluster_lib:stop_node(HostName,ClusterName,State#state.cluster_spec),
     {reply, Reply, State};
 %% --------------------------------------------------------------------
+
+handle_call({intent_pod,ClusterName},_From, State) ->
+    Reply=pod_lib:intent_cluster(ClusterName,State#state.cluster_spec),   
+    {reply, Reply, State};
+
+handle_call({intent_pod},_From, State) ->
+    Reply=pod_lib:intent_cluster(State#state.cluster_spec),   
+    {reply, Reply, State};
 
 handle_call({pod_names,HostName,ClusterName},_From, State) ->
     Reply=cluster_data:pod_all_names(HostName,ClusterName,State#state.cluster_spec),

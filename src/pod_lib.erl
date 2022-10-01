@@ -15,7 +15,9 @@
 
 	 is_node_present/4,
 	 start_node/4,
-	 stop_node/4
+	 stop_node/4,
+	 intent/2,
+	 intent/1
 	 
 	]).
 		 
@@ -23,6 +25,49 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% -------------------------------------------------------------------
+intent(ClusterSpec)->
+    WantedStateCluster=cluster_data:cluster_all_names(ClusterSpec),
+    AllPodNames=lists:append([cluster_data:pod_all_names(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-WantedStateCluster]),
+
+    StatusPods=[{is_node_present(HostName,ClusterName,PodName,ClusterSpec),HostName,PodName,ClusterName}||{HostName,ClusterName,PodName}<-AllPodNames],  
+    MissingPods=[{HostName,ClusterName,PodName}||{false,HostName,ClusterName,PodName}<-StatusPods],
+    Started=[start_node(HostName,ClusterName,PodName,ClusterSpec)||{HostName,ClusterName,PodName}<-MissingPods],
+    
+    StatusPods1=[{is_node_present(HostName,ClusterName,PodName,ClusterSpec),HostName,PodName,ClusterName}||{HostName,ClusterName,PodName}<-AllPodNames],   
+    MissingPods1=[{HostName,ClusterName,PodName}||{false,HostName,ClusterName,PodName}<-StatusPods1],
+    PresentPods1=[{HostName,ClusterName,PodName}||{true,HostName,ClusterName,PodName}<-StatusPods1],   
+    
+    {Started,MissingPods1,PresentPods1}.
+
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% -------------------------------------------------------------------
+intent(WantedClusterName,ClusterSpec)->
+    
+    WantedStateCluster=cluster_data:cluster_all_names(ClusterSpec),
+    AllPodNames=lists:append([cluster_data:pod_all_names(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-WantedStateCluster,
+											    WantedClusterName=:=ClusterName]),
+
+    StatusPods=[{is_node_present(HostName,ClusterName,PodName,ClusterSpec),HostName,PodName,ClusterName}||{HostName,ClusterName,PodName}<-AllPodNames],  
+    MissingPods=[{HostName,ClusterName,PodName}||{false,HostName,ClusterName,PodName}<-StatusPods],
+    Started=[start_node(HostName,ClusterName,PodName,ClusterSpec)||{HostName,ClusterName,PodName}<-MissingPods],
+
+    StatusPods1=[{is_node_present(HostName,ClusterName,PodName,ClusterSpec),HostName,PodName,ClusterName}||{HostName,ClusterName,PodName}<-AllPodNames],   
+    MissingPods1=[{HostName,ClusterName,PodName}||{false,HostName,ClusterName,PodName}<-StatusPods1],
+    PresentPods1=[{HostName,ClusterName,PodName}||{true,HostName,ClusterName,PodName}<-StatusPods1],   
+
+    {Started,MissingPods1,PresentPods1}.
+
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()

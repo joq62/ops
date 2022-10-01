@@ -12,11 +12,13 @@
 -module(cluster_lib).   
  
 -export([
-
+	 all_services/2,
 	 is_cluster_present/1,
 	 is_node_present/3,
 	 start_node/3,
-	 stop_node/3
+	 stop_node/3,
+	 intent/2,
+	 intent/1
 	 
 	]).
 		 
@@ -24,6 +26,75 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% -------------------------------------------------------------------
+intent(ClusterSpec)->
+    WantedStateCluster=cluster_data:cluster_all_names(ClusterSpec),
+    StatusCluster=[{is_node_present(HostName,ClusterName,ClusterSpec),HostName,ClusterName}||{HostName,ClusterName}<-WantedStateCluster],  
+    MissingCluster=[{HostName,ClusterName}||{false,HostName,ClusterName}<-StatusCluster],
+  
+    Started=[start_node(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-MissingCluster],
+    PresentCluster=[{HostName,ClusterName}||{true,HostName,ClusterName}<-StatusCluster],
+    Ping=case PresentCluster of
+	     []-> % No nodes already started
+		 [{Node,NodeStarted,dist_lib:ping(Node,Cookie,NodeStarted)}||{ok,{_,_,NodeStarted,CookieStarted,_}}<-Started,
+									     {ok,{_,_,Node,Cookie,_}}<-Started,
+									     CookieStarted=:=Cookie,
+									     Node/=NodeStarted];
+	     _->
+		 PresentNodeCookie=[node_cookie(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-PresentCluster],
+		 [{Node,NodeStarted,dist_lib:ping(Node,Cookie,NodeStarted)}||{ok,{_,_,NodeStarted,CookieStarted,_}}<-Started,
+									     {Node,Cookie}<-PresentNodeCookie,
+									     CookieStarted=:=Cookie,
+									     Node/=NodeStarted]
+	 end,
+    io:format("Started ~p~n",[{?MODULE,?FUNCTION_NAME,Started}]),
+    io:format("Ping ~p~n",[{?MODULE,?FUNCTION_NAME,Ping}]),
+
+    StatusCluster1=[{is_node_present(HostName,ClusterName,ClusterSpec),HostName,ClusterName}||{HostName,ClusterName}<-WantedStateCluster],  
+    MissingCluster1=[{HostName,ClusterName}||{false,HostName,ClusterName}<-StatusCluster1],
+    PresentCluster1=[{HostName,ClusterName}||{true,HostName,ClusterName}<-StatusCluster1],
+    {Started,MissingCluster1,PresentCluster1}.
+
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% -------------------------------------------------------------------
+intent(WantedClusterName,ClusterSpec)->
+
+    WantedStateCluster=cluster_data:cluster_all_names(ClusterSpec),
+    StatusCluster=[{is_node_present(HostName,ClusterName,ClusterSpec),HostName,ClusterName}||{HostName,ClusterName}<-WantedStateCluster,
+											     WantedClusterName=:=ClusterName],  
+    MissingCluster=[{HostName,ClusterName}||{false,HostName,ClusterName}<-StatusCluster],
+    Started=[start_node(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-MissingCluster],
+    PresentCluster=[{HostName,ClusterName}||{true,HostName,ClusterName}<-StatusCluster],
+    Ping=case PresentCluster of
+	     []-> % No nodes already started
+		 [{Node,NodeStarted,dist_lib:ping(Node,Cookie,NodeStarted)}||{ok,{_,_,NodeStarted,CookieStarted,_}}<-Started,
+									     {ok,{_,_,Node,Cookie,_}}<-Started,
+									     CookieStarted=:=Cookie,
+									     Node/=NodeStarted];
+	     _->
+		 PresentNodeCookie=[node_cookie(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-PresentCluster],
+		 [{Node,NodeStarted,dist_lib:ping(Node,Cookie,NodeStarted)}||{ok,{_,_,NodeStarted,CookieStarted,_}}<-Started,
+									     {Node,Cookie}<-PresentNodeCookie,
+									     CookieStarted=:=Cookie,
+									     Node/=NodeStarted]
+	 end,
+    io:format("Started ~p~n",[{?MODULE,?FUNCTION_NAME,Started}]),
+    io:format("Ping ~p~n",[{?MODULE,?FUNCTION_NAME,Ping}]),
+
+    StatusCluster1=[{is_node_present(HostName,ClusterName,ClusterSpec),HostName,ClusterName}||{HostName,ClusterName}<-WantedStateCluster],  
+    MissingCluster1=[{HostName,ClusterName}||{false,HostName,ClusterName}<-StatusCluster1],
+    PresentCluster1=[{HostName,ClusterName}||{true,HostName,ClusterName}<-StatusCluster1],
+    {Started,MissingCluster1,PresentCluster1}.
+
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
@@ -99,3 +170,28 @@ stop_node(HostName,ClusterName,ClusterSpec)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+all_services(WantedClusterName,ClusterSpec)->
+
+    io:format("WantedClusterName ~p~n",[{WantedClusterName,?MODULE,?FUNCTION_NAME}]),
+
+    WantedStateCluster=cluster_data:cluster_all_names(ClusterSpec),
+
+    HostClusterNameList=[{is_node_present(HostName,ClusterName,ClusterSpec),HostName,ClusterName}||{HostName,ClusterName}<-WantedStateCluster,
+												   WantedClusterName=:=ClusterName],  
+    io:format("HostClusterNameList ~p~n",[{HostClusterNameList,?MODULE,?FUNCTION_NAME}]),
+    Result=case HostClusterNameList of
+	       []->
+		   {error,[eexists,WantedClusterName]};
+	       HostClusterNameList->
+		   NodeCookieList=[node_cookie(HostName,ClusterName,ClusterSpec)||{true,HostName,ClusterName}<-HostClusterNameList],
+		   io:format("NodeCookieList ~p~n",[{NodeCookieList,?MODULE,?FUNCTION_NAME}]),
+		   AllNodes=[{Node,Cookie,dist_lib:cmd(Node,Cookie,erlang,nodes,[],5000)}||{Node,Cookie}<-NodeCookieList],
+		  % AllApps=[{Node,Cookie,dist_lib:cmd(Node,Cookie,application,which_applications,[],5000)}||{Node,Cookie}<-NodeCookieList],
+		   AllNodes
+	   end,
+    Result.
+		  
+node_cookie(HostName,ClusterName,ClusterSpec)->
+    {ok,Node}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
+    {ok,Cookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+    {Node,Cookie}.
