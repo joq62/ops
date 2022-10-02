@@ -48,7 +48,7 @@ start()->
   
     
     io:format("Test OK !!! ~p~n",[?MODULE]),
-    ok=cleanup(),
+ %   ok=cleanup(),
     ok.
 
 
@@ -63,14 +63,32 @@ start()->
 %% --------------------------------------------------------------------
 all_services()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
-
-    HostNameList=cluster:cluster_names(),
-    AllServices=lists:append([cluster:all_services(ClusterName)||{_,ClusterName}<-HostNameList]),
-    io:format("AllServices  ~p~n",[{AllServices,?MODULE,?FUNCTION_NAME}]),
+      
+    AllServices=cluster:all_services(),
+    io:format("AllServices ~p~n",[{AllServices,?MODULE,?FUNCTION_NAME}]),
     
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
     
     ok.
+
+
+remove_duplicates([])->
+    [];
+remove_duplicates(L)->
+    lists:reverse(remove_duplicates(L,[])).
+
+remove_duplicates([],Acc)->
+    Acc;
+remove_duplicates([{ClusterName,Info}|T],Acc)->
+     NewAcc=case lists:keymember(ClusterName,1,Acc) of
+	       true->
+		   Acc;
+	       false->
+		   [{ClusterName,Info}|Acc]
+	   end,
+    
+    remove_duplicates(T,NewAcc).
+   
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -100,9 +118,12 @@ setup()->
     pong=cluster:ping(),
     ok=cluster_stop(),
     io:format("Start cluster:intent_cluster() ~p~n",[?FUNCTION_NAME]),
-    cluster:intent_cluster(),
-    io:format("Start cluster:intent_pods() ~p~n",[?FUNCTION_NAME]),
-    cluster:intent_pods(),
+    IntentCluster=cluster:intent_cluster(),
+    io:format("IntentCluster ~p~n",[{IntentCluster,?FUNCTION_NAME}]),
+      
+    IntentPods=cluster:intent_pods(),
+    io:format("IntentPods ~p~n",[{IntentPods,?FUNCTION_NAME}]),
+
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
 
     ok.
@@ -114,3 +135,6 @@ cleanup()->
     timer:sleep(3000),
     init:stop(),
     ok.
+
+
+

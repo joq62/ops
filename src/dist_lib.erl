@@ -40,7 +40,7 @@
 
 -define(NODENAME,"ops").
 -define(TEMP_DIR,"temp_ops").
--define(SSH_TIMEOUT,8000).
+-define(SSH_TIMEOUT,10000).
 -define(Node(HostName),list_to_atom(?NODENAME++"@"++HostName)).
 
 %% --------------------------------------------------------------------
@@ -66,19 +66,19 @@ start_node(HostName,NodeName,Cookie,EnvArgs)->
     Reply=case rpc:call(node(),my_ssh,ssh_send,[Ip,SshPort,Uid,Pwd,Msg,TimeOut],TimeOut-1000) of
 	     % {badrpc,timeout}-> retry X times       
 	       {badrpc,Reason}->
-		   {error,[{?MODULE,?LINE," ",badrpc,Reason}]};
+		   {error,[{?MODULE,?LINE," ",badrpc,Reason,HostName,NodeName,Cookie}]};
 	      {error,Reason}->
-		  {error,[Reason]};
+		  {error,[HostName,NodeName,Cookie,Reason]};
 	      ok->
      		  CreatedNode=list_to_atom(NodeName++"@"++HostName),
 		  case vm:check_started_node(CreatedNode) of
 		      false->
-			  {error,[couldnt_start_node,CreatedNode,Cookie]};
+			  {error,[couldnt_start_node,CreatedNode,HostName,NodeName,Cookie]};
 		      true ->
 			  {ok,CreatedNode}
 		  end
 	  end,
-    io:format("Reply ~p~n",[{Reply, ?FUNCTION_NAME}]),
+    io:format("Reply ~p~n",[{Reply,?MODULE,?FUNCTION_NAME}]),
     erlang:set_cookie(node(),CurrentCookie),
     Reply.
    

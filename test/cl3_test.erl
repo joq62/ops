@@ -70,7 +70,14 @@ start()->
     
      [{"c200","c1","c1_3"},{"c200","c1","c1_2"},
       {"c200","c1","c1_1"},{"c200","c1","c1_0"}]=MissingPods2,
+
+    CNode100=list_to_atom("c1"++"@"++"c100"),
+    C1Cookie="c1_cookie",
+    Nodes=dist_lib:cmd(CNode100,C1Cookie,erlang,nodes,[],5000),
+    gl=Nodes,
     
+
+
   %  ok=pod_start_test(),
   %  ok=pod_stop_test(),
   

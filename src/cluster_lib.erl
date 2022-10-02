@@ -12,6 +12,7 @@
 -module(cluster_lib).   
  
 -export([
+	 all_services/1,
 	 all_services/2,
 	 is_cluster_present/1,
 	 is_node_present/3,
@@ -52,7 +53,7 @@ intent(ClusterSpec)->
 									     CookieStarted=:=Cookie,
 									     Node/=NodeStarted]
 	 end,
-    io:format("Started ~p~n",[{?MODULE,?FUNCTION_NAME,Started}]),
+  %  io:format("Started ~p~n",[{?MODULE,?FUNCTION_NAME,Started}]),
     io:format("Ping ~p~n",[{?MODULE,?FUNCTION_NAME,Ping}]),
 
     StatusCluster1=[{is_node_present(HostName,ClusterName,ClusterSpec),HostName,ClusterName}||{HostName,ClusterName}<-WantedStateCluster],  
@@ -87,13 +88,13 @@ intent(WantedClusterName,ClusterSpec)->
 									     CookieStarted=:=Cookie,
 									     Node/=NodeStarted]
 	 end,
-    io:format("Started ~p~n",[{?MODULE,?FUNCTION_NAME,Started}]),
+  %  io:format("Started ~p~n",[{?MODULE,?FUNCTION_NAME,Started}]),
     io:format("Ping ~p~n",[{?MODULE,?FUNCTION_NAME,Ping}]),
 
     StatusCluster1=[{is_node_present(HostName,ClusterName,ClusterSpec),HostName,ClusterName}||{HostName,ClusterName}<-WantedStateCluster],  
     MissingCluster1=[{HostName,ClusterName}||{false,HostName,ClusterName}<-StatusCluster1],
     PresentCluster1=[{HostName,ClusterName}||{true,HostName,ClusterName}<-StatusCluster1],
-    {Started,MissingCluster1,PresentCluster1}.
+    [{started,Started},{missing,MissingCluster1},{present,PresentCluster1}].
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -170,24 +171,32 @@ stop_node(HostName,ClusterName,ClusterSpec)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+all_services(ClusterSpec)->
+    HostNameList=cluster_data:cluster_all_names(ClusterSpec),
+    AllServices=[{ClusterName,all_services(ClusterName,ClusterSpec)}||{_,ClusterName}<-HostNameList],
+    remove_duplicates(AllServices).
+
 all_services(WantedClusterName,ClusterSpec)->
 
-    io:format("WantedClusterName ~p~n",[{WantedClusterName,?MODULE,?FUNCTION_NAME}]),
+   % io:format("WantedClusterName ~p~n",[{WantedClusterName,?MODULE,?FUNCTION_NAME}]),
 
     WantedStateCluster=cluster_data:cluster_all_names(ClusterSpec),
 
-    HostClusterNameList=[{is_node_present(HostName,ClusterName,ClusterSpec),HostName,ClusterName}||{HostName,ClusterName}<-WantedStateCluster,
-												   WantedClusterName=:=ClusterName],  
-    io:format("HostClusterNameList ~p~n",[{HostClusterNameList,?MODULE,?FUNCTION_NAME}]),
-    Result=case HostClusterNameList of
+    HostNames=[HostName||{HostName,ClusterName}<-WantedStateCluster,
+			 WantedClusterName=:=ClusterName,
+			 true=:=is_node_present(HostName,ClusterName,ClusterSpec)],  
+    
+    Result=case HostNames of
 	       []->
-		   {error,[eexists,WantedClusterName]};
-	       HostClusterNameList->
-		   NodeCookieList=[node_cookie(HostName,ClusterName,ClusterSpec)||{true,HostName,ClusterName}<-HostClusterNameList],
-		   io:format("NodeCookieList ~p~n",[{NodeCookieList,?MODULE,?FUNCTION_NAME}]),
-		   AllNodes=[{Node,Cookie,dist_lib:cmd(Node,Cookie,erlang,nodes,[],5000)}||{Node,Cookie}<-NodeCookieList],
-		  % AllApps=[{Node,Cookie,dist_lib:cmd(Node,Cookie,application,which_applications,[],5000)}||{Node,Cookie}<-NodeCookieList],
-		   AllNodes
+		   {error,[?MODULE,?FUNCTION_NAME,?LINE,eexists,WantedClusterName]};
+	       _->
+		   
+		   [{NodeFirst,Cookie}|_]=[node_cookie(HostName,WantedClusterName,ClusterSpec)||HostName<-HostNames],
+		   PodNodes=dist_lib:cmd(NodeFirst,Cookie,erlang,nodes,[],5000),
+		 %  io:format("PodNodes ~p~n",[{PodNodes,?MODULE,?FUNCTION_NAME}]),
+		   
+		   AllApps=[{Node,WantedClusterName,Cookie,dist_lib:cmd(Node,Cookie,application,which_applications,[],5000)}||Node<-PodNodes],
+		   AllApps
 	   end,
     Result.
 		  
@@ -195,3 +204,21 @@ node_cookie(HostName,ClusterName,ClusterSpec)->
     {ok,Node}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
     {ok,Cookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
     {Node,Cookie}.
+
+
+remove_duplicates([])->
+    [];
+remove_duplicates(L)->
+    lists:reverse(remove_duplicates(L,[])).
+
+remove_duplicates([],Acc)->
+    Acc;
+remove_duplicates([{ClusterName,Info}|T],Acc)->
+     NewAcc=case lists:keymember(ClusterName,1,Acc) of
+	       true->
+		   Acc;
+	       false->
+		   [{ClusterName,Info}|Acc]
+	   end,
+    
+    remove_duplicates(T,NewAcc).
