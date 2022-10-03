@@ -19,64 +19,18 @@
 
 %% External exports
 
-%% start_ops_node
-%% stop_ops_node 
-
-%% Usecases
-% mkdir
-% rmdir
-% cp_file
-% rm_file
-
-
-% Update config file on one host
-% Update config file on all hosts
-
-% delete config file on node 
-% 
-% start new cluster 
-% delete cluster 
-
-% load_start appl on cluster node
-% stop_unload appl on cluster node
-
-% read nodelog on node
 
 
 -export([
-	 create_all_clusters/0,
-	 delete_all_clusters/0,
-	 create_cluster/1,
-	 delete_cluster/1,
-
-	 cluster_spec/0,
-	 deployment_spec/0
-
+	 create_cluster_node/2,
+	 delete_cluster_node/2,
+	 is_cluster_node_present/2
 	]).
 
 -export([
-	 start_ops_node/1,
-	 stop_ops_node/1,
-	 start_node/4,
-	 stop_node/3
-	 
-       
+	 cluster_names/0
 	]).
 
-
--export([
-	 git_clone/3
-	]).
-
-
--export([
-	 cmd/5,
-	 mkdir/2,
-	 rmdir/2,
-	 rmdir_r/2,
-	 cp_file/4,
-	 rm_file/3
-	]).
 
 -export([
 	 start/0,
@@ -106,58 +60,18 @@
 appl_start([])->
     application:start(?MODULE).
 %% --------------------------------------------------------------------
+create_cluster_node(HostName,ClusterName)->
+    gen_server:call(?MODULE,{create_cluster_node,HostName,ClusterName},infinity).   
+delete_cluster_node(HostName,ClusterName)->
+    gen_server:call(?MODULE,{delete_cluster_node,HostName,ClusterName},infinity).
+is_cluster_node_present(HostName,ClusterName)->
+    gen_server:call(?MODULE,{is_cluster_node_present,HostName,ClusterName},infinity).    
 
-cluster_spec()->
-    gen_server:call(?MODULE,{cluster_spec},infinity).   
-deployment_spec()->
-    gen_server:call(?MODULE,{deployment_spec},infinity). 
-
-
-create_all_clusters()->
-    gen_server:call(?MODULE,{create_all_clusters},infinity).   
-delete_all_clusters()->
-    gen_server:call(?MODULE,{delete_all_clusters},infinity).   
-
-create_cluster(ClusterName)->
-    gen_server:call(?MODULE,{create_cluster,ClusterName},infinity).   
-delete_cluster(ClusterName)->
-    gen_server:call(?MODULE,{delete_cluster,ClusterName},infinity).   
+cluster_names()->
+    gen_server:call(?MODULE,{cluster_names},infinity).   
 
 %% --------------------------------------------------------------------
-start_node(HostName,NodeName,Cookie,EnvArgs)->
-    gen_server:call(?MODULE,{start_node,HostName,NodeName,Cookie,EnvArgs},infinity).   
-stop_node(HostName,NodeName,Cookie)->
-    gen_server:call(?MODULE,{stop_node,HostName,NodeName,Cookie},infinity).   
 
-
-start_ops_node(HostName)->
-    gen_server:call(?MODULE,{start_ops_node,HostName},infinity).   
-stop_ops_node(HostName)->
-    gen_server:call(?MODULE,{stop_ops_node,HostName},infinity).    
-
-git_clone(HostName,Appl,Dir)->
-    gen_server:call(?MODULE,{git_clone,HostName,Appl,Dir},infinity).
-% mkdir
-% rmdir
-% cp_file
-% rm_file
-
-cmd(HostName,M,F,A,TimeOut)->
-    gen_server:call(?MODULE,{cmd,HostName,M,F,A,TimeOut},infinity).
-
-mkdir(HostName,DirName)->
-    gen_server:call(?MODULE,{mkdir,HostName,DirName},infinity).
-
-rmdir(HostName,DirName)->
-    gen_server:call(?MODULE,{rmdir,HostName,DirName},infinity).
-
-rmdir_r(HostName,DirName)->
-    gen_server:call(?MODULE,{rmdir_r,HostName,DirName},infinity).
-
-cp_file(SourceDir,SourcFileName,HostName, DestDir)->
-    gen_server:call(?MODULE,{cp_file,SourceDir,SourcFileName,HostName, DestDir},infinity).
-rm_file(HostName, Dir,FileName)->
-    gen_server:call(?MODULE,{rm_file,HostName, Dir,FileName},infinity).
     
 %% call
 start()-> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -183,9 +97,9 @@ ping()->
 init([]) ->
 
     ok=application:start(config),
-
+    ClusterSpec=cluster_data:read_cluster_spec(),
       
-    {ok, #state{cluster_spec=[],
+    {ok, #state{cluster_spec=ClusterSpec,
 		deployment_spec=[]}}.   
  
 
@@ -199,13 +113,22 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call({create_all_clusters},_From, State) ->
-    Reply=cluster:create_all_clusters(State#state.cluster_spec),
+handle_call({cluster_names},_From, State) ->
+    Reply=ops_misc:cluster_names(State#state.cluster_spec),
     {reply, Reply, State};
 
-handle_call({delete_all_clusters},_From, State) ->
-    Reply=cluster:delete_all_clusters(State#state.cluster_spec),
+handle_call({create_cluster_node,HostName,ClusterName},_From, State) ->
+    Reply=ops_misc:create_cluster_node(HostName,ClusterName,State#state.cluster_spec),
     {reply, Reply, State};
+
+handle_call({delete_cluster_node,HostName,ClusterName},_From, State) ->
+    Reply=ops_misc:delete_cluster_node(HostName,ClusterName,State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({is_cluster_node_present,HostName,ClusterName},_From, State) ->
+    Reply=ops_misc:is_cluster_node_present(HostName,ClusterName,State#state.cluster_spec),
+    {reply, Reply, State};
+
 
 handle_call({cluster_spec},_From, State) ->
     Reply=cluster_data:cluster_all_names(State#state.cluster_spec),
@@ -217,59 +140,6 @@ handle_call({deployment_spec},_From, State) ->
 
  
 %% --------------------------------------------------------------------
-
-
-
-
-handle_call({start_node,HostName,NodeName,Cookie,EnvArgs},_From, State) ->
-    Reply=ops_lib:start_node(HostName,NodeName,Cookie,EnvArgs),
-    {reply, Reply, State};
-handle_call({stop_node,HostName,NodeName,Cookie},_From, State) ->
-    Reply=ops_lib:stop_node(HostName,NodeName,Cookie),
-    {reply, Reply, State};
-
-handle_call({cmd,HostName,M,F,A,TimeOut},_From, State) ->
-    Reply=ops_lib:cmd(HostName,M,F,A,TimeOut),
-    {reply, Reply, State};
-
-handle_call({git_clone,HostName,Appl,Dir},_From, State) ->
-    Reply=ops_lib:git_clone(HostName,Appl,Dir),
-    {reply, Reply, State};
-
-
-handle_call({start_ops_node,HostName},_From, State) ->
-    Reply=ops_lib:start_ops_node(HostName),
-    {reply, Reply, State};
-
-handle_call({stop_ops_node,HostName},_From, State) ->
-    Reply=ops_lib:stop_ops_node(HostName),
-    {reply, Reply, State};
-
-
-handle_call({mkdir,HostName,DirName},_From, State) ->
-    Reply=ops_lib:mkdir(HostName,DirName),
-    {reply, Reply, State};
-
-handle_call({rmdir,HostName,DirName},_From, State) ->
-    Reply=ops_lib:rmdir(HostName,DirName),
-    {reply, Reply, State};
-
-handle_call({rmdir_r,HostName,DirName},_From, State) ->
-    Reply=ops_lib:rmdir_r(HostName,DirName),
-    {reply, Reply, State};
-
-handle_call({cp_file,SourceDir,SourcFileName,HostName, DestDir},_From, State) ->
-    Reply=ops_lib:cp_file(SourceDir,SourcFileName,HostName, DestDir),
-    {reply, Reply, State};
-
-handle_call({rm_file,HostName, Dir,FileName},_From, State) ->
-    Reply=ops_lib:rm_file(HostName, Dir,FileName),
-    {reply, Reply, State};
-
-
-
-
-
 
 
 handle_call({ping},_From, State) ->

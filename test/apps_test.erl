@@ -98,8 +98,8 @@ remove_duplicates([{ClusterName,Info}|T],Acc)->
 cluster_stop()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
 
-    HostNameList=cluster:cluster_names(),
-    [cluster:stop_cluster_node(HostName,ClusterName)||{HostName,ClusterName}<-HostNameList],
+    HostClusterNameList=cluster:cluster_names(),
+    [cluster:stop_cluster_node(HostName,ClusterName)||{HostName,ClusterName}<-HostClusterNameList],
 
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
 

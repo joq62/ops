@@ -9,7 +9,7 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(cluster_data).   
+-module(deployment_data).   
  
 -export([
 
