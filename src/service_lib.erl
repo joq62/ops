@@ -24,14 +24,15 @@
 %% Include files
 %% --------------------------------------------------------------------
 git_load(PodNode,ClusterCookie,Appl,BaseApplDir)->
-    GitPath=config:appl
+    GitPath=config:application_gitpath(Appl),
     App=list_to_atom(Appl), 
     {ok,Root}= dist_lib:cmd(PodNode,ClusterCookie,file,get_cwd,[],1000),  
     ApplDir=filename:join(Root,BaseApplDir),
     TempDir=filename:join(Root,"temp.dir"),
+    
     dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["rm -rf "++TempDir],1000),
     timer:sleep(1000),
-    ok= dist_lib:cmd(PodNode,ClusterCookie,file,make_dir,[TempDir],1000),
+    ok=dist_lib:cmd(PodNode,ClusterCookie,file,make_dir,[TempDir],1000),
     Clonres= dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["git clone "++GitPath++" "++TempDir],5000),
     timer:sleep(1000),
     io:format("Clonres ~p~n",[Clonres]),
@@ -50,46 +51,19 @@ git_load(PodNode,ClusterCookie,Appl,BaseApplDir)->
 	      true->
 		  case  dist_lib:cmd(PodNode,ClusterCookie,code,add_patha,[Ebin],5000) of
 		      true->
-			  {ok,ApplDir};
+			  dist_lib:cmd(PodNode,ClusterCookie,application,load,[App],5000);
 		      {badrpc,Reason} ->
 			  {error,[badrpc,?MODULE,?FUNCTION_NAME,?LINE,Reason]};
 		      Err ->
 			  {error,[?MODULE,?FUNCTION_NAME,?LINE,Err]}
 		  end;
 	      false ->
-		  {error,[ebin_dir_not_created,?MODULE,?FUNCTION_NAME,?LINE,Node]};
+		  {error,[ebin_dir_not_created,?MODULE,?FUNCTION_NAME,?LINE,PodNode]};
 	      {badrpc,Reason} ->
 
 		  {error,[?MODULE,?FUNCTION_NAME,?LINE,badrpc,Reason]}
 	  end,
     Reply.
-
-
-   
-    Result= case dist_lib:mkdir(PodNode,ClusterCookie,ApplDir) of
-		{error,Reason}->
-		    {error,Reason};
-		ok->
-		    EbinApplDir=filename:join(ApplDir,"ebin"),
-		    case dist_lib:mkdir(PodNode,ClusterCookie,EbinApplDir) of
-			{error,Reason}->
-			    {error,Reason};
-			ok->
-			    case file:list_dir(SourceDir) of
-				{error,Reason}->
-				    {error,Reason};
-				{ok,EbinFiles}->
-				    [dist_lib:cp_file(PodNode,ClusterCookie,SourceDir,SourcFileName,EbinApplDir)||SourcFileName<-EbinFiles], 
-				    case dist_lib:cmd(PodNode,ClusterCookie,code,add_patha,[EbinApplDir],5000) of
-					{error,Reason}->
-					    {error,Reason};
-					true->
-					    dist_lib:cmd(PodNode,ClusterCookie,application,load,[App],5000)
-				    end
-			    end
-		    end
-	    end,
-    Result.
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()

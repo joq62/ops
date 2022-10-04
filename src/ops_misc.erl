@@ -32,7 +32,11 @@
 	]).
 
 -export([
-	
+	 git_load_service/5,
+	 load_service/5,
+	 start_service/5,
+	 stop_service/5,
+	 unload_service/5
 	]).
 
 
@@ -40,6 +44,44 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+git_load_service(HostName,ClusterName,PodName,Service,ClusterSpec)->
+    
+    %service_lib:git_load(PodNode,ClusterCookie,Service,BaseApplDir).
+    ok.
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+load_service(HostName,ClusterName,PodName,Service,ClusterSpec)->
+    ok.
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+start_service(HostName,ClusterName,PodName,Service,ClusterSpec)->
+    ok.
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+stop_service(HostName,ClusterName,PodName,Service,ClusterSpec)->
+    ok.
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% ------------------------------------------------------------------- 
+unload_service(HostName,ClusterName,PodName,Service,ClusterSpec)->
+    ok.
+
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc

@@ -42,8 +42,8 @@
 -export([
 	 git_load_service/4,
 	 load_service/4,
-	 start_service/3,
-	 stop_service/3,
+	 start_service/4,
+	 stop_service/4,
 	 unload_service/4
 	]).
 
@@ -106,16 +106,16 @@ pod_intent(ClusterName)->
 
 %% --------------------------------------------------------------------
 
-git_load_service(Service,Cookie,PodNode,PodDir)->
-    gen_server:call(?MODULE,{git_load_service,Service,Cookie,PodNode,PodDir},infinity). 
-load_service(Service,Cookie,PodNode,PodDir)->
-    gen_server:call(?MODULE,{load_service,Service,Cookie,PodNode,PodDir},infinity). 
-start_service(Service,Cookie,PodNode)->
-    gen_server:call(?MODULE,{start_service,Service,Cookie,PodNode},infinity). 
-stop_service(Service,PodNode,Cookie)->
-    gen_server:call(?MODULE,{stop_service,Service,PodNode,Cookie},infinity). 
-unload_service(Service,Cookie,PodNode,PodDir)->
-    gen_server:call(?MODULE,{unload_service,Service,Cookie,PodNode,PodDir},infinity). 
+git_load_service(HostName,ClusterName,PodName,Service)->
+    gen_server:call(?MODULE,{git_load_service,HostName,ClusterName,PodName,Service},infinity). 
+load_service(HostName,ClusterName,PodName,Service)->
+    gen_server:call(?MODULE,{load_service,HostName,ClusterName,PodName,Service},infinity). 
+start_service(HostName,ClusterName,PodName,Service)->
+    gen_server:call(?MODULE,{start_service,HostName,ClusterName,PodName,Service},infinity). 
+stop_service(HostName,ClusterName,PodName,Service)->
+    gen_server:call(?MODULE,{stop_service,HostName,ClusterName,PodName,Service},infinity). 
+unload_service(HostName,ClusterName,PodName,Service)->
+    gen_server:call(?MODULE,{unload_service,HostName,ClusterName,PodName,Service},infinity). 
 
   
     
@@ -160,24 +160,24 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 
-handle_call({git_load_service,Service,Cookie,PodNode,PodDir},_From, State) ->
-    Reply=ops_misc:git_load_service(Service,Cookie,PodNode,PodDir,State#state.cluster_spec),
+handle_call({git_load_service,HostName,ClusterName,PodName,Service},_From, State) ->
+    Reply=ops_misc:git_load_service(HostName,ClusterName,PodName,Service,State#state.cluster_spec),
     {reply, Reply, State};
 
-handle_call({load_service,Service,Cookie,PodNode,PodDir},_From, State) ->
-    Reply=ops_misc:load_service(Service,Cookie,PodNode,PodDir,State#state.cluster_spec),
+handle_call({load_service,HostName,ClusterName,PodName,Service},_From, State) ->
+    Reply=ops_misc:load_service(HostName,ClusterName,PodName,Service,State#state.cluster_spec),
     {reply, Reply, State};
 
-handle_call({start_service,Service,Cookie,PodNode},_From, State) ->
-    Reply=ops_misc:start_service(Service,Cookie,PodNode,State#state.cluster_spec),
+handle_call({start_service,HostName,ClusterName,PodName,Service},_From, State) ->
+    Reply=ops_misc:start_service(HostName,ClusterName,PodName,Service,State#state.cluster_spec),
     {reply, Reply, State};
 
-handle_call({stop_service,Service,Cookie,PodNode},_From, State) ->
-    Reply=ops_misc:stop_service(Service,Cookie,PodNode,State#state.cluster_spec),
+handle_call({stop_service,HostName,ClusterName,PodName,Service},_From, State) ->
+    Reply=ops_misc:stop_service(HostName,ClusterName,PodName,Service,State#state.cluster_spec),
     {reply, Reply, State};
 
-handle_call({unload_service,Service,Cookie,PodNode,PodDir},_From, State) ->
-    Reply=ops_misc:unload_service(Service,Cookie,PodNode,PodDir,State#state.cluster_spec),
+handle_call({unload_service,HostName,ClusterName,PodName,Service},_From, State) ->
+    Reply=ops_misc:unload_service(HostName,ClusterName,PodName,Service,State#state.cluster_spec),
     {reply, Reply, State};
   
 %% --------------------------------------------------------------------

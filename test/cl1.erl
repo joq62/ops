@@ -34,11 +34,37 @@ start()->
     
     ok=pod_start_test(),
     
-    ok=cluster_stop_test(),
+    ok=service_test(),
+
+ %   ok=cluster_stop_test(),
            
     io:format("Test OK !!! ~p~n",[?MODULE]),
     init:stop(),
     ok.
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+service_test()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+
+    Appl="sd",
+    {_HostName,_ClusterName,ClusterCookie,PodNode,PodDir}={"c100","c1","c1_cookie",c1_0@c100,"c1.dir/c1_0"},
+    BaseApplDir=filename:join(PodDir,Appl),
+    dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["rm -rf "++BaseApplDir],1000),
+    timer:sleep(1000),
+    ok=dist_lib:cmd(PodNode,ClusterCookie,file,make_dir,[BaseApplDir],1000),
+
+    R=service_lib:git_load(PodNode,ClusterCookie,Appl,BaseApplDir),
+    io:format("service_lib:git_load !!! ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,R}]),
+
+    
+
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
+
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -109,7 +135,7 @@ cluster_stop_test()->
 cluster_stop()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
 
-    HostClusterNameList=ops:cluster_names(),
+    ops:cluster_names(),
    
 
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
