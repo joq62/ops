@@ -4,7 +4,7 @@
   0},
  {<<"config">>,
   {git,"https://github.com/joq62/config.git",
-       {ref,"f27eeaf626b1c1d3c8e4f5327c374723eae9371f"}},
+       {ref,"ae789bbfa77d5dad66b73733d12e5bcec386d5a9"}},
   0},
  {<<"nodelog">>,
   {git,"https://github.com/joq62/nodelog.git",

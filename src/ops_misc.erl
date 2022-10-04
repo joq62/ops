@@ -14,12 +14,25 @@
 -export([
 	 create_cluster_node/3,
 	 delete_cluster_node/3,
-	 is_cluster_node_present/3
+	 is_cluster_node_present/3,
+	 cluster_names/1,
+	 cluster_intent/1,
+	 cluster_intent/2
+
+	]).
+-export([
+	 create_pod_node/4,
+	 delete_pod_node/4,
+	 is_pod_node_present/4,
+	 pod_name_dir_list/3,
+	 pod_intent/1,
+	 pod_intent/2
+
 
 	]).
 
 -export([
-	 cluster_names/1
+	
 	]).
 
 
@@ -27,12 +40,60 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+pod_intent(ClusterSpec)->
+    pod_lib:intent(ClusterSpec).
 
--define(NODENAME,"ops").
--define(TEMP_DIR,"temp_ops").
--define(SSH_TIMEOUT,5000).
--define(Node(HostName),list_to_atom(?NODENAME++"@"++HostName)).
+pod_intent(WantedClusterName,ClusterSpec)->
+    pod_lib:intent(WantedClusterName,ClusterSpec).
+    
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+pod_name_dir_list(HostName,ClusterName,ClusterSpec)->
+    pod_data:name_dir_list(HostName,ClusterName,ClusterSpec).
+    
+%%--------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
 
+create_pod_node(HostName,ClusterName,PodName,ClusterSpec)->
+    pod_lib:start_node(HostName,ClusterName,PodName,ClusterSpec).
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% -------------------------------------------------------------------
+delete_pod_node(HostName,ClusterName,PodName,ClusterSpec)->
+    cluster_lib:stop_node(HostName,ClusterName,PodName,ClusterSpec).
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+is_pod_node_present(HostName,ClusterName,PodName,ClusterSpec)->
+    pod_lib:is_node_present(HostName,ClusterName,PodName,ClusterSpec).
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+cluster_intent(ClusterSpec)->
+    cluster_lib:intent(ClusterSpec).
+
+cluster_intent(WantedClusterName,ClusterSpec)->
+    cluster_lib:intent(WantedClusterName,ClusterSpec).
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
@@ -50,31 +111,7 @@ cluster_names(ClusterSpec)->
 %% -------------------------------------------------------------------
 
 create_cluster_node(HostName,ClusterName,ClusterSpec)->
-    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
-    {ok,ClusterDir}=cluster_data:cluster_spec(dir,HostName,ClusterName,ClusterSpec),
-    create_node(HostName,ClusterName,ClusterCookie,ClusterDir).
-
-%% --------------------------------------------------------------------
-%% --------------------------------------------------------------------
-create_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)->
-    Result=case dist_lib:start_node(HostName,ClusterNodeName,ClusterCookie," -detached  ") of
-	       {error,Reason}->
-		   {error,[Reason,HostName,ClusterNodeName,ClusterCookie]};
-	       {ok,ClusterNode} ->
-		   dist_lib:rmdir_r(ClusterNode,ClusterCookie,ClusterDir),
-		   case dist_lib:mkdir(ClusterNode,ClusterCookie,ClusterDir) of
-		       {error,Reason}->
-			   {error,[Reason,HostName,ClusterNodeName,ClusterCookie]};
-		       ok->
-			   case dist_lib:cmd(ClusterNode,ClusterCookie,filelib,is_dir,[ClusterDir],5000) of
-			       false->
-				   {error,[cluster_dir_eexists,ClusterDir,HostName,ClusterNodeName,ClusterCookie]};
-			       true->
-				   {ok,{HostName,ClusterNodeName,ClusterNode,ClusterCookie,ClusterDir}}
-			   end
-		   end
-	   end,
-    Result.
+    cluster_lib:start_node(HostName,ClusterName,ClusterSpec).
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -82,13 +119,7 @@ create_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% -------------------------------------------------------------------
 delete_cluster_node(HostName,ClusterName,ClusterSpec)->
-    {ok,Node}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
-    {ok,Cookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
-    {ok,Dir}=cluster_data:cluster_spec(dir,HostName,ClusterName,ClusterSpec),
-    dist_lib:rmdir_r(Node,Cookie,Dir),
- %   io:format("Rm ~p~n",[{R,Dir,?MODULE,?FUNCTION_NAME}]),
-    dist_lib:stop_node(HostName,ClusterName,Cookie),
-    ok.
+    cluster_lib:stop_node(HostName,ClusterName,ClusterSpec).
 
 
 %% --------------------------------------------------------------------
@@ -97,14 +128,7 @@ delete_cluster_node(HostName,ClusterName,ClusterSpec)->
 %% Returns: non
 %% -------------------------------------------------------------------
 is_cluster_node_present(HostName,ClusterName,ClusterSpec)->
-    {ok,Node}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
-    {ok,Cookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
-    case dist_lib:ping(node(),Cookie,Node) of
-	pang->
-	    false;
-	pong->
-	    true
-    end.
+    cluster_lib:is_node_present(HostName,ClusterName,ClusterSpec).
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc

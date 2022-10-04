@@ -125,8 +125,9 @@ ping()->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-    ClusterNodes=erlang:get(cluster_nodes),
-    PodNameDirList=erlang:get(pod_name_dir_list),
+    
+    {ok,ClusterNodes}=application:get_env(cluster,cluster_nodes),
+    {ok,PodNameDirList}=application:get_env(cluster,pod_name_dir_list),
         
     {ok, #state{
 	    cluster_nodes=ClusterNodes,

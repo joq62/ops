@@ -9,7 +9,7 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(cl_test).   
+-module(cl1).   
  
 -export([start/0]).
 %% --------------------------------------------------------------------
@@ -32,7 +32,7 @@ start()->
 
     ok=cluster_start_test(),
     
-%    ok=pod_start_test(),
+    ok=pod_start_test(),
     
     ok=cluster_stop_test(),
            
@@ -45,8 +45,15 @@ start()->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+pod_start_test()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
 
+    R=ops:pod_intent(),
+    io:format("ops:pod_intent() !!! ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,R}]),
 
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
+ 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
@@ -121,7 +128,6 @@ setup()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
 
     ok=application:start(ops),
-    pong=cluster:ping(),
     ok=cluster_stop(),
     
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),

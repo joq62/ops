@@ -24,11 +24,27 @@
 -export([
 	 create_cluster_node/2,
 	 delete_cluster_node/2,
-	 is_cluster_node_present/2
+	 is_cluster_node_present/2,
+	 cluster_names/0,
+	 cluster_intent/0,
+	 cluster_intent/1
 	]).
 
 -export([
-	 cluster_names/0
+	 create_pod_node/3,
+	 delete_pod_node/3,
+	 is_pod_node_present/3,
+	 pod_name_dir_list/2,
+	 pod_intent/0,
+	 pod_intent/1
+	]).
+
+-export([
+	 git_load_service/4,
+	 load_service/4,
+	 start_service/3,
+	 stop_service/3,
+	 unload_service/4
 	]).
 
 
@@ -66,12 +82,42 @@ delete_cluster_node(HostName,ClusterName)->
     gen_server:call(?MODULE,{delete_cluster_node,HostName,ClusterName},infinity).
 is_cluster_node_present(HostName,ClusterName)->
     gen_server:call(?MODULE,{is_cluster_node_present,HostName,ClusterName},infinity).    
-
 cluster_names()->
     gen_server:call(?MODULE,{cluster_names},infinity).   
+cluster_intent()->
+    gen_server:call(?MODULE,{cluster_intent},infinity). 
+cluster_intent(ClusterName)->
+    gen_server:call(?MODULE,{cluster_intent,ClusterName},infinity).   
 
 %% --------------------------------------------------------------------
 
+create_pod_node(HostName,ClusterName,PodName)->
+    gen_server:call(?MODULE,{create_pod_node,HostName,ClusterName,PodName},infinity).   
+delete_pod_node(HostName,ClusterName,PodName)->
+    gen_server:call(?MODULE,{delete_pod_node,HostName,ClusterName,PodName},infinity).
+is_pod_node_present(HostName,ClusterName,PodName)->
+    gen_server:call(?MODULE,{is_pod_node_present,HostName,ClusterName,PodName},infinity).    
+pod_name_dir_list(HostName,ClusterName)->
+    gen_server:call(?MODULE,{pod_name_dir_list,HostName,ClusterName},infinity).   
+pod_intent()->
+    gen_server:call(?MODULE,{pod_intent},infinity). 
+pod_intent(ClusterName)->
+    gen_server:call(?MODULE,{pod_intent,ClusterName},infinity).   
+
+%% --------------------------------------------------------------------
+
+git_load_service(Service,Cookie,PodNode,PodDir)->
+    gen_server:call(?MODULE,{git_load_service,Service,Cookie,PodNode,PodDir},infinity). 
+load_service(Service,Cookie,PodNode,PodDir)->
+    gen_server:call(?MODULE,{load_service,Service,Cookie,PodNode,PodDir},infinity). 
+start_service(Service,Cookie,PodNode)->
+    gen_server:call(?MODULE,{start_service,Service,Cookie,PodNode},infinity). 
+stop_service(Service,PodNode,Cookie)->
+    gen_server:call(?MODULE,{stop_service,Service,PodNode,Cookie},infinity). 
+unload_service(Service,Cookie,PodNode,PodDir)->
+    gen_server:call(?MODULE,{unload_service,Service,Cookie,PodNode,PodDir},infinity). 
+
+  
     
 %% call
 start()-> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -113,6 +159,38 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
+
+handle_call({git_load_service,Service,Cookie,PodNode,PodDir},_From, State) ->
+    Reply=ops_misc:git_load_service(Service,Cookie,PodNode,PodDir,State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({load_service,Service,Cookie,PodNode,PodDir},_From, State) ->
+    Reply=ops_misc:load_service(Service,Cookie,PodNode,PodDir,State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({start_service,Service,Cookie,PodNode},_From, State) ->
+    Reply=ops_misc:start_service(Service,Cookie,PodNode,State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({stop_service,Service,Cookie,PodNode},_From, State) ->
+    Reply=ops_misc:stop_service(Service,Cookie,PodNode,State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({unload_service,Service,Cookie,PodNode,PodDir},_From, State) ->
+    Reply=ops_misc:unload_service(Service,Cookie,PodNode,PodDir,State#state.cluster_spec),
+    {reply, Reply, State};
+  
+%% --------------------------------------------------------------------
+
+
+handle_call({cluster_intent},_From, State) ->
+    Reply=ops_misc:cluster_intent(State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({cluster_intent,ClusterName},_From, State) ->
+    Reply=ops_misc:cluster_intent(ClusterName,State#state.cluster_spec),
+    {reply, Reply, State};
+
 handle_call({cluster_names},_From, State) ->
     Reply=ops_misc:cluster_names(State#state.cluster_spec),
     {reply, Reply, State};
@@ -140,6 +218,30 @@ handle_call({deployment_spec},_From, State) ->
 
  
 %% --------------------------------------------------------------------
+
+handle_call({pod_intent},_From, State) ->
+    Reply=ops_misc:pod_intent(State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({pod_intent,ClusterName},_From, State) ->
+    Reply=ops_misc:pod_intent(ClusterName,State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({pod_name_dir_list,HostName,ClusterName},_From, State) ->
+    Reply=ops_misc:pod_name_dir_list(HostName,ClusterName,State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({create_pod_node,HostName,ClusterName,PodName},_From, State) ->
+    Reply=ops_misc:create_pod_node(HostName,ClusterName,PodName,State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({delete_pod_node,HostName,ClusterName,PodName},_From, State) ->
+    Reply=ops_misc:delete_pod_node(HostName,ClusterName,PodName,State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({is_pod_node_present,HostName,ClusterName,PodName},_From, State) ->
+    Reply=ops_misc:is_pod_node_present(HostName,ClusterName,PodName,State#state.cluster_spec),
+    {reply, Reply, State};
 
 
 handle_call({ping},_From, State) ->
