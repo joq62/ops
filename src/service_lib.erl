@@ -13,41 +13,59 @@
   
 -export([
 	 git_load/4,
+	 git_load/5,
 	 load/5,
-	 start/3,
-	 stop/3,
-	 unload/3,
-	 running/2,
-	 loaded/2
+	 start/5,
+	 stop/5,
+	 unload/5,
+	 is_running/5,
+	 is_loaded/5
 	]).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
-git_load(PodNode,ClusterCookie,Appl,BaseApplDir)->
+git_load(HostName,ClusterName,PodName,Appl,ClusterSpec)->
+    {ok,PodInfo}=pod_data:pod_info_by_name(HostName,ClusterName,PodName,ClusterSpec),
+    PodNode=pod_data:pod(node,PodInfo),
+    PodDir=pod_data:pod(dir,PodInfo),
+    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+    Result=git_load(PodNode,ClusterCookie,Appl,PodDir),
+    Result.
+	
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+
+git_load(PodNode,ClusterCookie,Appl,PodDir)->
     GitPath=config:application_gitpath(Appl),
     App=list_to_atom(Appl), 
     {ok,Root}= dist_lib:cmd(PodNode,ClusterCookie,file,get_cwd,[],1000),  
-    ApplDir=filename:join(Root,BaseApplDir),
+    ApplDir=filename:join([Root,PodDir,Appl]),
+    dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["rm -rf "++ApplDir],1000),
+    timer:sleep(1000),
+    ok=dist_lib:cmd(PodNode,ClusterCookie,file,make_dir,[ApplDir],1000),
     TempDir=filename:join(Root,"temp.dir"),
-    
     dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["rm -rf "++TempDir],1000),
     timer:sleep(1000),
     ok=dist_lib:cmd(PodNode,ClusterCookie,file,make_dir,[TempDir],1000),
-    Clonres= dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["git clone "++GitPath++" "++TempDir],5000),
+    _Clonres= dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["git clone "++GitPath++" "++TempDir],5000),
     timer:sleep(1000),
-    io:format("Clonres ~p~n",[Clonres]),
+  %  io:format("Clonres ~p~n",[Clonres]),
 
-    MvRes= dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["mv  "++TempDir++"/*"++" "++ApplDir],5000),
-    io:format("MvRes ~p~n",[MvRes]),
+    _MvRes= dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["mv  "++TempDir++"/*"++" "++ApplDir],5000),
+    %io:format("MvRes ~p~n",[MvRes]),
  %   rpc:cast(node(),nodelog_server,log,[info,?MODULE_STRING,?LINE,
 %				     {mv_result,MvRes}]),
-    RmRes= dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["rm -r  "++TempDir],5000),
+    _RmRes= dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["rm -r  "++TempDir],5000),
     timer:sleep(1000),
-    io:format("RmRes ~p~n",[RmRes]),
+    %io:format("RmRes ~p~n",[RmRes]),
     %rpc:cast(node(),nodelog_server,log,[info,?MODULE_STRING,?LINE,
 %				     {rm_result,RmRes}]),
     Ebin=filename:join(ApplDir,"ebin"),
-    Reply=case  dist_lib:cmd(PodNode,ClusterCookie,filelib,is_dir,[Ebin],5000) of
+    Result=case  dist_lib:cmd(PodNode,ClusterCookie,filelib,is_dir,[Ebin],5000) of
 	      true->
 		  case  dist_lib:cmd(PodNode,ClusterCookie,code,add_patha,[Ebin],5000) of
 		      true->
@@ -63,7 +81,7 @@ git_load(PodNode,ClusterCookie,Appl,BaseApplDir)->
 
 		  {error,[?MODULE,?FUNCTION_NAME,?LINE,badrpc,Reason]}
 	  end,
-    Reply.
+    Result.
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -102,6 +120,16 @@ load(PodNode,ClusterCookie,Appl,SourceDir,ApplDir)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+start(HostName,ClusterName,PodName,Appl,ClusterSpec)->
+    {ok,PodInfo}=pod_data:pod_info_by_name(HostName,ClusterName,PodName,ClusterSpec),
+    PodNode=pod_data:pod(node,PodInfo),
+    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+    Result=start(PodNode,ClusterCookie,Appl),
+  %  io:format("Result ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,Result}]),
+    Result.
+
+
+
 start(PodNode,ClusterCookie,Appl)->
     App=list_to_atom(Appl),
     dist_lib:cmd(PodNode,ClusterCookie,application,start,[App],5000).
@@ -111,6 +139,15 @@ start(PodNode,ClusterCookie,Appl)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+stop(HostName,ClusterName,PodName,Appl,ClusterSpec)->
+    {ok,PodInfo}=pod_data:pod_info_by_name(HostName,ClusterName,PodName,ClusterSpec),
+    PodNode=pod_data:pod(node,PodInfo),
+    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+    Result=stop(PodNode,ClusterCookie,Appl),
+   % io:format("Result ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,Result}]),
+    Result.
+
+
 stop(PodNode,ClusterCookie,Appl)->
     App=list_to_atom(Appl),
     dist_lib:cmd(PodNode,ClusterCookie,application,stop,[App],5000).
@@ -120,6 +157,17 @@ stop(PodNode,ClusterCookie,Appl)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+unload(HostName,ClusterName,PodName,Appl,ClusterSpec)->
+    {ok,PodInfo}=pod_data:pod_info_by_name(HostName,ClusterName,PodName,ClusterSpec),
+    PodNode=pod_data:pod(node,PodInfo),
+    PodDir=pod_data:pod(dir,PodInfo),
+    ApplDir=filename:join(PodDir,Appl),
+    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+    Result=unload(PodNode,ClusterCookie,ApplDir),
+   % io:format("Result ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,Result}]),
+    Result.
+
+
 unload(PodNode,ClusterCookie,ApplDir)->
     dist_lib:rmdir_r(PodNode,ClusterCookie,ApplDir).
 
@@ -129,17 +177,32 @@ unload(PodNode,ClusterCookie,ApplDir)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-running(PodNode,ClusterCookie)->
-    dist_lib:cmd(PodNode,ClusterCookie,application,which_applications,[],5000).
+is_running(HostName,ClusterName,PodName,Appl,ClusterSpec)->
+    {ok,PodInfo}=pod_data:pod_info_by_name(HostName,ClusterName,PodName,ClusterSpec),
+    PodNode=pod_data:pod(node,PodInfo),
+    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+    is_running(PodNode,ClusterCookie,Appl).
+
+
+is_running(PodNode,ClusterCookie,Appl)->
+    App=list_to_atom(Appl),
+    Result=case dist_lib:cmd(PodNode,ClusterCookie,App,ping,[],5000) of
+	       pang->
+		   false;
+	       pong->
+		   true;
+	       {badrpc,_}->
+		   false
+	   end,
+    Result.
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-
-loaded(PodNode,ClusterCookie)->
-    dist_lib:cmd(PodNode,ClusterCookie,application,loaded_applications,[],5000).
+is_loaded(_HostName,_ClusterName,_PodName,_Appl,_ClusterSpec)->
+    not_implemented.
 
 
 

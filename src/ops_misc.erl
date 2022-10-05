@@ -36,7 +36,9 @@
 	 load_service/5,
 	 start_service/5,
 	 stop_service/5,
-	 unload_service/5
+	 unload_service/5,
+	 is_service_running/5,
+	 is_service_loaded/5
 	]).
 
 
@@ -44,43 +46,61 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
 git_load_service(HostName,ClusterName,PodName,Service,ClusterSpec)->
-    
-    %service_lib:git_load(PodNode,ClusterCookie,Service,BaseApplDir).
-    ok.
+    service_lib:git_load(HostName,ClusterName,PodName,Service,ClusterSpec).
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
-load_service(HostName,ClusterName,PodName,Service,ClusterSpec)->
-    ok.
+load_service(_HostName,_ClusterName,_PodName,_Service,_ClusterSpec)->
+    not_implemented.
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
 start_service(HostName,ClusterName,PodName,Service,ClusterSpec)->
-    ok.
+    service_lib:start(HostName,ClusterName,PodName,Service,ClusterSpec).
+    
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% -------------------------------------------------------------------
 stop_service(HostName,ClusterName,PodName,Service,ClusterSpec)->
-    ok.
+    service_lib:stop(HostName,ClusterName,PodName,Service,ClusterSpec).
+    
 %% --------------------------------------------------------------------
 %% Function:start/0 
 %% Description: Initiate the eunit tests, set upp needed processes etc
 %% Returns: non
 %% ------------------------------------------------------------------- 
 unload_service(HostName,ClusterName,PodName,Service,ClusterSpec)->
-    ok.
+    service_lib:unload(HostName,ClusterName,PodName,Service,ClusterSpec).
+    
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+is_service_running(HostName,ClusterName,PodName,Service,ClusterSpec)->
+    service_lib:is_running(HostName,ClusterName,PodName,Service,ClusterSpec).
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+is_service_loaded(HostName,ClusterName,PodName,Service,ClusterSpec)->
+    service_lib:is_loaded(HostName,ClusterName,PodName,Service,ClusterSpec).
 
 %% --------------------------------------------------------------------
 %% Function:start/0 

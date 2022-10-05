@@ -36,7 +36,7 @@ start()->
     
     ok=service_test(),
 
- %   ok=cluster_stop_test(),
+    ok=cluster_stop_test(),
            
     io:format("Test OK !!! ~p~n",[?MODULE]),
     init:stop(),
@@ -49,19 +49,26 @@ start()->
 %% --------------------------------------------------------------------
 service_test()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
-
+  
+    HostName="c100",
+    ClusterName="c1",
+    PodName="c1_0",
     Appl="sd",
-    {_HostName,_ClusterName,ClusterCookie,PodNode,PodDir}={"c100","c1","c1_cookie",c1_0@c100,"c1.dir/c1_0"},
-    BaseApplDir=filename:join(PodDir,Appl),
-    dist_lib:cmd(PodNode,ClusterCookie,os,cmd,["rm -rf "++BaseApplDir],1000),
-    timer:sleep(1000),
-    ok=dist_lib:cmd(PodNode,ClusterCookie,file,make_dir,[BaseApplDir],1000),
 
-    R=service_lib:git_load(PodNode,ClusterCookie,Appl,BaseApplDir),
-    io:format("service_lib:git_load !!! ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,R}]),
-
+    % load
+    ok=ops:git_load_service(HostName,ClusterName,PodName,Appl),  
     
-
+    % start
+    ok=ops:start_service(HostName,ClusterName,PodName,Appl),  
+    true=ops:is_service_running(HostName,ClusterName,PodName,Appl),  
+        
+    %stop
+    ok=ops:stop_service(HostName,ClusterName,PodName,Appl),  
+    false=ops:is_service_running(HostName,ClusterName,PodName,Appl),  
+  
+    % unload
+    []=ops:unload_service(HostName,ClusterName,PodName,Appl),  
+    
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
     ok.
 
@@ -74,9 +81,28 @@ service_test()->
 pod_start_test()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
 
-    R=ops:pod_intent(),
-    io:format("ops:pod_intent() !!! ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,R}]),
-
+    {
+     [{ok,{"c201","c1","c1_cookie",c1_3@c201,"c1.dir/c1_3"}},
+      {ok,{"c201","c1","c1_cookie",c1_2@c201,"c1.dir/c1_2"}},
+      {ok,{"c201","c1","c1_cookie",c1_1@c201,"c1.dir/c1_1"}},
+      {ok,{"c201","c1","c1_cookie",c1_0@c201,"c1.dir/c1_0"}},
+      {error,[pod_lib,create,_,[badrpc,nodedown],c1@c200,"c1.dir/c1_3"]},
+      {error,[pod_lib,create,_,[badrpc,nodedown],c1@c200,"c1.dir/c1_2"]},
+      {error,[pod_lib,create,_,[badrpc,nodedown],c1@c200,"c1.dir/c1_1"]},
+      {error,[pod_lib,create,_,[badrpc,nodedown],c1@c200,"c1.dir/c1_0"]},
+      {ok,{"c100","c1","c1_cookie",c1_3@c100,"c1.dir/c1_3"}},
+      {ok,{"c100","c1","c1_cookie",c1_2@c100,"c1.dir/c1_2"}},
+      {ok,{"c100","c1","c1_cookie",c1_1@c100,"c1.dir/c1_1"}},
+      {ok,{"c100","c1","c1_cookie",c1_0@c100,"c1.dir/c1_0"}},
+      {ok,{"c100","c2","c2_cookie",c2_2@c100,"c2.dir/c2_2"}},
+      {ok,{"c100","c2","c2_cookie",c2_1@c100,"c2.dir/c2_1"}},
+      {ok,{"c100","c2","c2_cookie",c2_0@c100,"c2.dir/c2_0"}}],
+     [{"c200","c1_3","c1"},{"c200","c1_2","c1"}, {"c200","c1_1","c1"},{"c200","c1_0","c1"}],
+     [{"c201","c1_3","c1"},{"c201","c1_2","c1"},{"c201","c1_1","c1"},{"c201","c1_0","c1"},
+      {"c100","c1_3","c1"},{"c100","c1_2","c1"},{"c100","c1_1","c1"},{"c100","c1_0","c1"},
+      {"c100","c2_2","c2"},{"c100","c2_1","c2"},{"c100","c2_0","c2"}]
+    }=ops:pod_intent(),
+    
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
     ok.
  
@@ -132,29 +158,13 @@ cluster_stop_test()->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-cluster_stop()->
-    io:format("Start ~p~n",[?FUNCTION_NAME]),
-
-    ops:cluster_names(),
-   
-
-    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
-
-    ok.
-
-
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
 
 
 setup()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
 
     ok=application:start(ops),
-    ok=cluster_stop(),
+    ok=cluster_stop_test(),
     
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
 

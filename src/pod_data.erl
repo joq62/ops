@@ -17,7 +17,7 @@
 
 -export([
 	 pod_all_names/3,
-	 pod_by_name/4,
+	 pod_info_by_name/4,
 	 
 	 pod/2,
 	 pod_hostname/3,
@@ -45,6 +45,50 @@
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+
+pod(Key,PodInfo)->
+    Result=case Key of
+	       hostname->
+		   PodInfo#pod_info.hostname;
+	       node->
+		   PodInfo#pod_info.node;
+	       name->
+		   PodInfo#pod_info.name;
+	       dir->
+		   PodInfo#pod_info.dir;
+	       Eexists->
+		   {error,[eexists,Eexists]}
+	   end,
+    Result.
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+
+pod_info_by_name(HostName,ClusterName,PodName,ClusterSpec)->
+     Result=case cluster_data:cluster_spec(pods_info,HostName,ClusterName,ClusterSpec) of
+	       {error,Reason}->
+		   {error,Reason};
+	       {ok,PodsInfoList}->
+		   I=[X||X<-PodsInfoList,
+			 PodName=:=cluster_data:pod(name,X)],
+		   case I of
+		       []->
+			   {error,[eexists,PodName]};
+		       [PodInfo]->
+			   {ok,PodInfo}
+		   end
+	    end,
+    Result.
+
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
 name_dir_list(HostName,ClusterName,ClusterSpec)->
     Result=case cluster_data:cluster_spec(pods_info,HostName,ClusterName,ClusterSpec) of
 	       {error,Reason}->
@@ -54,7 +98,11 @@ name_dir_list(HostName,ClusterName,ClusterSpec)->
 	   end,
     Result.
 		   
-    
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------    
 
 pod_hostname(Key,HostName,PodInfo)->
     R=[I||I<-PodInfo,
@@ -77,7 +125,11 @@ pod_hostname(Key,HostName,PodInfo)->
 	_ ->
 	    {ok,Result}
     end.
-
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
 
 pod_node(Key,Node,PodInfo)->
     R=[I||I<-PodInfo,
@@ -100,38 +152,7 @@ pod_node(Key,Node,PodInfo)->
 	   end,
        Result.
 
-pod(Key,PodInfo)->
-    Result=case Key of
-	       hostname->
-		   PodInfo#pod_info.hostname;
-	       node->
-		   PodInfo#pod_info.node;
-	       name->
-		   PodInfo#pod_info.name;
-	       dir->
-		   PodInfo#pod_info.dir;
-	       Eexists->
-		   {error,[eexists,Eexists]}
-	   end,
-    Result.
 
-
-
-pod_by_name(HostName,ClusterName,PodName,ClusterSpec)->
-     Result=case cluster_data:cluster_spec(pods_info,HostName,ClusterName,ClusterSpec) of
-	       {error,Reason}->
-		   {error,Reason};
-	       {ok,PodsInfoList}->
-		   I=[X||X<-PodsInfoList,
-			 PodName=:=cluster_data:pod(name,X)],
-		   case I of
-		       []->
-			   {error,[eexists,PodName]};
-		       [PodInfo]->
-			   {ok,PodInfo}
-		   end
-	    end,
-    Result.
 			   
 pod_all_names(HostName,ClusterName,ClusterSpec)->
     Result=case cluster_data:cluster_spec(pods_info,HostName,ClusterName,ClusterSpec) of

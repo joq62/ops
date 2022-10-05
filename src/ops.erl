@@ -44,7 +44,9 @@
 	 load_service/4,
 	 start_service/4,
 	 stop_service/4,
-	 unload_service/4
+	 unload_service/4,
+	 is_service_running/4,
+	 is_service_loaded/4
 	]).
 
 
@@ -116,6 +118,10 @@ stop_service(HostName,ClusterName,PodName,Service)->
     gen_server:call(?MODULE,{stop_service,HostName,ClusterName,PodName,Service},infinity). 
 unload_service(HostName,ClusterName,PodName,Service)->
     gen_server:call(?MODULE,{unload_service,HostName,ClusterName,PodName,Service},infinity). 
+is_service_loaded(HostName,ClusterName,PodName,Service)->
+    gen_server:call(?MODULE,{is_service_loaded,HostName,ClusterName,PodName,Service},infinity). 
+is_service_running(HostName,ClusterName,PodName,Service)->
+    gen_server:call(?MODULE,{is_service_running,HostName,ClusterName,PodName,Service},infinity). 
 
   
     
@@ -179,6 +185,16 @@ handle_call({stop_service,HostName,ClusterName,PodName,Service},_From, State) ->
 handle_call({unload_service,HostName,ClusterName,PodName,Service},_From, State) ->
     Reply=ops_misc:unload_service(HostName,ClusterName,PodName,Service,State#state.cluster_spec),
     {reply, Reply, State};
+
+handle_call({is_service_running,HostName,ClusterName,PodName,Service},_From, State) ->
+    Reply=ops_misc:is_service_running(HostName,ClusterName,PodName,Service,State#state.cluster_spec),
+    {reply, Reply, State};
+
+handle_call({is_service_loaded,HostName,ClusterName,PodName,Service},_From, State) ->
+    Reply=ops_misc:is_service_loaded(HostName,ClusterName,PodName,Service,State#state.cluster_spec),
+    {reply, Reply, State};
+
+
   
 %% --------------------------------------------------------------------
 

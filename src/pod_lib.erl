@@ -37,13 +37,15 @@ intent(ClusterSpec)->
     AllPodNames=lists:append([cluster_data:pod_all_names(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-WantedStateCluster]),
 
     StatusPods=[{is_node_present(HostName,ClusterName,PodName,ClusterSpec),HostName,ClusterName,PodName}||{HostName,ClusterName,PodName}<-AllPodNames],  
+  %  io:format("StatusPods ~p~n",[{?FUNCTION_NAME,?LINE,StatusPods}]),
     MissingPods=[{HostName,ClusterName,PodName}||{false,HostName,ClusterName,PodName}<-StatusPods],
     Started=[start_node(HostName,ClusterName,PodName,ClusterSpec)||{HostName,ClusterName,PodName}<-MissingPods],
     
     StatusPods1=[{is_node_present(HostName,ClusterName,PodName,ClusterSpec),HostName,PodName,ClusterName}||{HostName,ClusterName,PodName}<-AllPodNames],   
+  %  io:format("StatusPods1 ~p~n",[{?FUNCTION_NAME,?LINE,StatusPods1}]),
     MissingPods1=[{HostName,ClusterName,PodName}||{false,HostName,ClusterName,PodName}<-StatusPods1],
     PresentPods1=[{HostName,ClusterName,PodName}||{true,HostName,ClusterName,PodName}<-StatusPods1],   
-    
+      
     {Started,MissingPods1,PresentPods1}.
 
 
@@ -97,7 +99,7 @@ is_node_present(HostName,ClusterName,PodName,ClusterSpec)->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% -------------------------------------------------------------------
 start_node(HostName,ClusterName,PodName,ClusterSpec)->
-    io:format(" ~p~n",[{HostName,ClusterName,PodName,?MODULE,?FUNCTION_NAME}]),
+   % io:format(" ~p~n",[{HostName,ClusterName,PodName,?MODULE,?FUNCTION_NAME}]),
     Result=case cluster_data:pod_by_name(HostName,ClusterName,PodName,ClusterSpec) of
 	       {error,Reason}->
 		   {error,[?MODULE,?FUNCTION_NAME,?LINE,Reason]};
@@ -112,7 +114,7 @@ start_node(HostName,ClusterName,PodName,ClusterSpec)->
 			   create(ClusterNode,ClusterCookie,HostName,ClusterName,PodName,PodDir,Args)
 		   end
 	   end,
-    io:format("Result ~p~n",[{Result,?MODULE,?FUNCTION_NAME}]),
+  %  io:format("Result ~p~n",[{Result,?MODULE,?FUNCTION_NAME}]),
     Result.
 
 %% --------------------------------------------------------------------

@@ -78,7 +78,7 @@ start_node(HostName,NodeName,Cookie,EnvArgs)->
 			  {ok,CreatedNode}
 		  end
 	  end,
-    io:format("Reply ~p~n",[{Reply,?MODULE,?FUNCTION_NAME}]),
+  %  io:format("Reply ~p~n",[{Reply,?MODULE,?FUNCTION_NAME}]),
     erlang:set_cookie(node(),CurrentCookie),
     Reply.
    
