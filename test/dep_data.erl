@@ -9,125 +9,50 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(deployment_data).   
+-module(dep_data).    
  
-
--export([
-	 read_spec/0,
-	 read_spec/1,
-	 create/5,
-	 all_names/1,
-	 info/2,
-	 item/3
-
-	]).
-
-
-
--record(deployment_spec,{
-			 deploy_name,
-			 cluster_name,
-			 num_instances,
-			 hostnames,
-			 services
-			}).
-		
-		   
-			 
-
+-export([start/0]).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--define(DeploymentSpecFile,"deployment.spec").
 
+	 
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% -------------------------------------------------------------------
+%% --------------------------------------------------------------------
+start()->
+   
+    ok=setup(),
+    
+    ok=read_spec(),
+    ok=all_names(),
+    ok=info(),
+    ok=item(),
+    
+           
+    io:format("Test OK !!! ~p~n",[?MODULE]),
+    init:stop(),
+    ok.
+
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
 read_spec()->
-    read_spec(?DeploymentSpecFile).
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+  
+     Spec=deployment_data:read_spec(),
+    [{deployment_spec,"cluster_infra","c1",1,["c100","c200","c201"],[{"sd","1.0.0"},{"nodelog","1.0.0"}]},
+     {deployment_spec,"test1","c1",2,["c100","c201"],[{"test_add","1.0.0"}]}]=Spec,
+      
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
 
-read_spec(DeploymentSpecFile)->
-    Result=case file:consult(DeploymentSpecFile) of
-	       {error,Reason}->
-		   {error,Reason};
-	       {ok,I}->
-		   [create(DeployName,ClusterName,NumInstances,HostNames,Services)||{{deploy_name,DeployName},
-										     {cluster_name,ClusterName},
-										     {num_instances,NumInstances},
-										     {hostnames,HostNames},
-										     {services,Services}}<-I]
-	   end,
-    Result.
 
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-create(DeployName,ClusterName,NumInstances,HostNames,Services)->
-    #deployment_spec{deploy_name=DeployName,
-		     cluster_name=ClusterName,
-		     num_instances=NumInstances,
-		     hostnames=HostNames,
-		     services=Services}.
-
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-all_names(DeploymentSpec)->
-    [I#deployment_spec.deploy_name||I<-DeploymentSpec].
-
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-info(DeploymentName,DeploymentSpec)->
-    R=[I||I<-DeploymentSpec,
-	  DeploymentName=:=I#deployment_spec.deploy_name],
-    Result=case R of
-	       []->
-		   {error,[eexists,DeploymentName]};
-	       [DeploymentInfo]->
-		   DeploymentInfo
-	   end,
-    Result.
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-item(Key,DeploymentName,DeploymentSpec)->
-    R=[I||I<-DeploymentSpec,
-	  DeploymentName=:=I#deployment_spec.deploy_name],
-    Result=case R of
-	       []->
-		   {error,[eexists,DeploymentName]};
-	       [X]->
-		   case Key of
-		       cluster_name->
-			   X#deployment_spec.cluster_name;
-		       num_instances->
-			   X#deployment_spec.num_instances;
-		       hostnames->
-			   X#deployment_spec.hostnames;
-		       services->
-			   X#deployment_spec.services;
-		       Eexists->
-			   {error,[eexists,Eexists]}
-		   end
-	   end,
-       Result.
 
 
 %% --------------------------------------------------------------------
@@ -135,3 +60,77 @@ item(Key,DeploymentName,DeploymentSpec)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+all_names()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+
+    Spec=deployment_data:read_spec(),
+    AllNames=deployment_data:all_names(Spec),
+    ["cluster_infra","test1"]=AllNames,
+  
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),    
+    ok.
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+info()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+    
+    Spec=deployment_data:read_spec(),
+    Info=deployment_data:info("cluster_infra",Spec),
+    {deployment_spec,"cluster_infra",
+     "c1",1,["c100","c200","c201"],
+     [{"sd","1.0.0"},{"nodelog","1.0.0"}]}=Info, 
+    
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),    
+    ok.
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+item()->
+
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+
+    Spec=deployment_data:read_spec(),
+    "c1"=deployment_data:item(cluster_name,"cluster_infra",Spec),
+    1=deployment_data:item(num_instances,"cluster_infra",Spec),
+    ["c100","c200","c201"]=deployment_data:item(hostnames,"cluster_infra",Spec),
+    [{"sd","1.0.0"},{"nodelog","1.0.0"}]=deployment_data:item(services,"cluster_infra",Spec),
+    
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),    
+
+    ok.
+
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+cluster_stop_test()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+
+    
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+
+
+setup()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+
+ 
+    
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+
+    ok.

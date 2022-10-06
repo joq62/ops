@@ -44,12 +44,12 @@
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
 all_names(HostName,ClusterName,ClusterSpec)->
-    Result=case cluster_data:item(pods_info,HostName,ClusterName,ClusterSpec) of
+    Result=case cluster_data:cluster_spec(pods_info,HostName,ClusterName,ClusterSpec) of
 	       {error,Reason}->
 		   {error,Reason};
-	       PodsInfoList->
+	       {ok,PodsInfoList}->
 		%io:format("PodsInfoList ~p~n",[{?FUNCTION_NAME,PodsInfoList}]),
-		   PodNameList=[item(name,PodInfo)||PodInfo<-PodsInfoList],
+		   PodNameList=[cluster_data:pod(name,PodInfo)||PodInfo<-PodsInfoList],
 		   do_pod_name_list(HostName,ClusterName,PodNameList,[])
 	   end,
     Result.
@@ -66,13 +66,14 @@ do_pod_name_list(HostName,ClusterName,[PodName|T],Acc)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+
 info(HostName,ClusterName,PodName,ClusterSpec)->
-    Result=case cluster_data:item(pods_info,HostName,ClusterName,ClusterSpec) of
+    Result=case cluster_data:cluster_spec(pods_info,HostName,ClusterName,ClusterSpec) of
 	       {error,Reason}->
-		   {error,[?MODULE,?FUNCTION_NAME,?LINE,Reason]};
-	       PodsInfoList->
+		   {error,Reason};
+	       {ok,PodsInfoList}->
 		   I=[X||X<-PodsInfoList,
-			 PodName=:=item(name,X)],
+			 PodName=:=cluster_data:pod(name,X)],
 		   case I of
 		       []->
 			   {error,[eexists,PodName]};
@@ -101,6 +102,28 @@ item(Key,PodInfo)->
 	   end,
     Result.
 
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+
+pod_info_by_name(HostName,ClusterName,PodName,ClusterSpec)->
+     Result=case cluster_data:cluster_spec(pods_info,HostName,ClusterName,ClusterSpec) of
+	       {error,Reason}->
+		   {error,Reason};
+	       {ok,PodsInfoList}->
+		   I=[X||X<-PodsInfoList,
+			 PodName=:=cluster_data:pod(name,X)],
+		   case I of
+		       []->
+			   {error,[eexists,PodName]};
+		       [PodInfo]->
+			   {ok,PodInfo}
+		   end
+	    end,
+    Result.
+
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -116,9 +139,78 @@ name_dir_list(HostName,ClusterName,ClusterSpec)->
 	   end,
     Result.
 		   
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------    
+
+pod_hostname(Key,HostName,PodInfo)->
+    R=[I||I<-PodInfo,
+	  HostName=:=I#pod_info.hostname],
+    
+    Result=case R of
+	       []->
+		   {error,[eexists,HostName]};
+	       _->
+		   case Key of
+		       name_dir->
+			   [{X#pod_info.name,X#pod_info.dir}||X<-R];
+		       Eexists->
+			   {error,[eexists,Eexists]}
+		   end
+	   end,
+    case Result of
+	{error,Reason}->
+	    {error,Reason};
+	_ ->
+	    {ok,Result}
+    end.
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+
+pod_node(Key,Node,PodInfo)->
+    R=[I||I<-PodInfo,
+	  Node=:=I#pod_info.node],
+    
+    Result=case R of
+	       []->
+		   {error,[eexists,Node]};
+	       [X]->
+		   case Key of
+		       hostname->
+			   X#pod_info.hostname;
+		       name->
+			   X#pod_info.name;
+		       dir->
+			   X#pod_info.dir;
+		       Eexists->
+			   {error,[eexists,Eexists]}
+		   end
+	   end,
+       Result.
+
+
+			   
 
 
 
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+
+
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
