@@ -8,6 +8,7 @@
               {modules,[cluster,cluster_2,cluster_data,cluster_lib,
                         cluster_lib_2,cluster_proxy,deployment_data,dist_lib,
                         ops,ops_app,ops_lib,ops_misc,ops_sup,pod,pod_data,
-                        pod_lib,pod_lib_2,scheduler,service,service_lib]},
+                        pod_lib,pod_lib_2,scheduler,scheduler_lib,service,
+                        service_lib]},
               {licenses,["Apache 2.0"]},
               {links,[]}]}.

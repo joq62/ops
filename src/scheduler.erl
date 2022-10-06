@@ -23,7 +23,9 @@
 
 -export([
 	 intent_cluster/1,
+	 cluster_status/1,
 	 intent_pods/1,
+	 pod_status/1,
 	 intent_services/1
 
 	]).
@@ -44,7 +46,7 @@
 
 %%-------------------------------------------------------------------
 -record(state,{
-	     
+	       cluster_spec
 	       }).
 
 
@@ -61,9 +63,13 @@ appl_start([])->
 
 intent_cluster(ClusterName)->
     gen_server:call(?MODULE,{intent_cluster,ClusterName},infinity).
+cluster_status(ClusterName)->
+    gen_server:call(?MODULE,{cluster_status,ClusterName},infinity).
+
 intent_pods(ClusterName)->
     gen_server:call(?MODULE,{intent_pods,ClusterName},infinity).
-
+pod_status(ClusterName)->
+    gen_server:call(?MODULE,{pod_status,ClusterName},infinity).
 intent_services(ClusterName)->
     gen_server:call(?MODULE,{intent_services,ClusterName},infinity).
 
@@ -95,7 +101,7 @@ init([]) ->
     
     
     {ok, #state{
-	    
+	    cluster_spec=ClusterSpec	    
 	   }}.   
  
 
@@ -115,7 +121,15 @@ handle_call({intent_cluster,ClusterName},_From, State) ->
     Reply=ops:intent(ClusterName),   
     {reply, Reply, State};
 
+handle_call({cluster_status,ClusterName},_From, State) ->
+    Reply=ops:intent(ClusterName),   
+    {reply, Reply, State};
+
 handle_call({intent_pods,ClusterName},_From, State) ->
+    Reply=ops:intent(ClusterName),   
+    {reply, Reply, State};
+
+handle_call({pod_status,ClusterName},_From, State) ->
     Reply=ops:intent(ClusterName),   
     {reply, Reply, State};
 
