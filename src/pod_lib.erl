@@ -33,8 +33,8 @@
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% -------------------------------------------------------------------
 intent(ClusterSpec)->
-    WantedStateCluster=cluster_data:cluster_all_names(ClusterSpec),
-    AllPodNames=lists:append([cluster_data:pod_all_names(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-WantedStateCluster]),
+    WantedStateCluster=cluster_data:all_names(ClusterSpec),
+    AllPodNames=lists:append([pod_data:all_names(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-WantedStateCluster]),
 
     StatusPods=[{is_node_present(HostName,ClusterName,PodName,ClusterSpec),HostName,ClusterName,PodName}||{HostName,ClusterName,PodName}<-AllPodNames],  
   %  io:format("StatusPods ~p~n",[{?FUNCTION_NAME,?LINE,StatusPods}]),
@@ -56,8 +56,8 @@ intent(ClusterSpec)->
 %% -------------------------------------------------------------------
 intent(WantedClusterName,ClusterSpec)->
     
-    WantedStateCluster=cluster_data:cluster_all_names(ClusterSpec),
-    AllPodNames=lists:append([cluster_data:pod_all_names(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-WantedStateCluster,
+    WantedStateCluster=cluster_data:all_names(ClusterSpec),
+    AllPodNames=lists:append([pod_data:all_names(HostName,ClusterName,ClusterSpec)||{HostName,ClusterName}<-WantedStateCluster,
 											    WantedClusterName=:=ClusterName]),
 
     StatusPods=[{is_node_present(HostName,ClusterName,PodName,ClusterSpec),HostName,ClusterName,PodName}||{HostName,ClusterName,PodName}<-AllPodNames],  
@@ -77,13 +77,13 @@ intent(WantedClusterName,ClusterSpec)->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% -------------------------------------------------------------------
 is_node_present(HostName,ClusterName,PodName,ClusterSpec)->
-    Result=case cluster_data:pod_by_name(HostName,ClusterName,PodName,ClusterSpec) of
+    Result=case pod_data:info(HostName,ClusterName,PodName,ClusterSpec) of
 	       {error,Reason}->
 		   {error,[?MODULE,?FUNCTION_NAME,?LINE,Reason]};
-	       {ok,PodsInfo}->
+	       PodInfo->
 		   %io:format("PodsInfo ~p~n",[{?FUNCTION_NAME,?LINE,PodsInfo}]),
-		   PodNode=cluster_data:pod(node,PodsInfo),
-		   {ok,Cookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+		   PodNode=pod_data:item(node,PodInfo),
+		   Cookie=cluster_data:item(cookie,HostName,ClusterName,ClusterSpec),
 		   case dist_lib:ping(node(),Cookie,PodNode) of
 		       pang->
 			   false;
@@ -100,14 +100,14 @@ is_node_present(HostName,ClusterName,PodName,ClusterSpec)->
 %% -------------------------------------------------------------------
 start_node(HostName,ClusterName,PodName,ClusterSpec)->
    % io:format(" ~p~n",[{HostName,ClusterName,PodName,?MODULE,?FUNCTION_NAME}]),
-    Result=case cluster_data:pod_by_name(HostName,ClusterName,PodName,ClusterSpec) of
+    Result=case pod_data:info(HostName,ClusterName,PodName,ClusterSpec) of
 	       {error,Reason}->
 		   {error,[?MODULE,?FUNCTION_NAME,?LINE,Reason]};
-	       {ok,PodsInfo}->
-		   {ok,ClusterNode}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
-		   {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+	       PodInfo->
+		   ClusterNode=cluster_data:item(node,HostName,ClusterName,ClusterSpec),
+		   ClusterCookie=cluster_data:item(cookie,HostName,ClusterName,ClusterSpec),
 		   Args=" -setcookie "++ClusterCookie,
-		   case cluster_data:pod(dir,PodsInfo) of
+		   case pod_data:item(dir,PodInfo) of
 		       {error,Reason}->
 			   {error,[?MODULE,?FUNCTION_NAME,?LINE,Reason]};
 		       PodDir->
@@ -152,16 +152,16 @@ create(ClusterNode,ClusterCookie,HostName,ClusterName,PodNodeName,PodDir,Args)->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% -------------------------------------------------------------------
 stop_node(HostName,ClusterName,PodName,ClusterSpec)->
-    Result=case cluster_data:pod_by_name(HostName,ClusterName,PodName,ClusterSpec) of
+    Result=case pod_data:info(HostName,ClusterName,PodName,ClusterSpec) of
 	       {error,Reason}->
-		   {error,Reason};
-	       {ok,PodsInfo}->
-		   case cluster_data:pod(dir,PodsInfo) of
+		   {error,[?MODULE,?FUNCTION_NAME,?LINE,Reason]};
+	       PodInfo->
+		   case pod_data:item(dir,PodInfo) of
 		       {error,Reason}->
 			   {error,Reason};
 		       PodDir->
-			   {ok,ClusterNode}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
-			   {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+			   ClusterNode=cluster_data:item(node,HostName,ClusterName,ClusterSpec),
+			   ClusterCookie=cluster_data:item(cookie,HostName,ClusterName,ClusterSpec),
 			   dist_lib:rmdir_r(ClusterNode,ClusterCookie,PodDir),
 			   dist_lib:stop_node(HostName,PodName,ClusterCookie)
 		   end

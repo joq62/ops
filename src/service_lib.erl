@@ -18,7 +18,7 @@
 	 start/5,
 	 stop/5,
 	 unload/5,
-	 is_running/5,
+	 which_services/1,
 	 is_loaded/5
 	]).
 %% --------------------------------------------------------------------
@@ -177,24 +177,38 @@ unload(PodNode,ClusterCookie,ApplDir)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-is_running(HostName,ClusterName,PodName,Appl,ClusterSpec)->
-    {ok,PodInfo}=pod_data:pod_info_by_name(HostName,ClusterName,PodName,ClusterSpec),
-    PodNode=pod_data:pod(node,PodInfo),
-    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
-    is_running(PodNode,ClusterCookie,Appl).
+which_services(ClusterName)->
+    ClusterSpec=cluster_data:read_spec(),
+    HostClusterList=[{HostName,CN}||{HostName,CN}<-cluster_data:all_names(ClusterSpec), % [{HostName,CluserName}]
+				    CN=:=ClusterName],
+    HostClusterPodNameList=lists:append([pod_data:all_names(HostName,CN,ClusterSpec)
+					 ||{HostName,CN}<-HostClusterList]),  %{HostName,ClusterName,PodName}
+    
+    
+    HostClusterPodNamePodNodeList=[{HostName,
+				    CN,
+				    PodName,
+				    pod_data:item(node,pod_data:info(HostName,CN,PodName,ClusterSpec))
+				   }||{HostName,CN,PodName}<-HostClusterPodNameList],
+    WhichServices=[{
+		    HostName,
+		    CN,
+		    PodName,
+		    Node,
+		    rpc:call(Node,application,which_applications,[],5000)
+		   }||{HostName,CN,PodName,Node}<-HostClusterPodNamePodNodeList],
+    
+    which_services(WhichServices,[]).
+which_services([],Acc)->
+    Acc;
+which_services([{HostName,ClusterName,PodName,Node,{badrpc,nodedown}}|T],Acc)->
+    which_services(T,Acc);    
+which_services([{HostName,ClusterName,PodName,Node,ServiceList}|T],Acc)->
+  %  io:format("ServiceList ~p~n",[{?MODULE,?LINE,ServiceList}]), 
+    L=[{HostName,ClusterName,PodName,Node,ServiceInfo}||ServiceInfo<-ServiceList], 
+    NewAcc=lists:append(L,Acc),
+    which_services(T,NewAcc).    
 
-
-is_running(PodNode,ClusterCookie,Appl)->
-    App=list_to_atom(Appl),
-    Result=case dist_lib:cmd(PodNode,ClusterCookie,App,ping,[],5000) of
-	       pang->
-		   false;
-	       pong->
-		   true;
-	       {badrpc,_}->
-		   false
-	   end,
-    Result.
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()

@@ -149,7 +149,7 @@ ping()->
 init([]) ->
 
     ok=application:start(config),
-    ClusterSpec=cluster_data:read_cluster_spec(),
+    ClusterSpec=cluster_data:read_spec(),
       
     {ok, #state{cluster_spec=ClusterSpec,
 		deployment_spec=[]}}.   

@@ -162,7 +162,7 @@ cluster_intent(WantedClusterName,ClusterSpec)->
 %% Returns: non
 %% -------------------------------------------------------------------
 cluster_names(ClusterSpec)->
-    HostClusterNameList=cluster_data:cluster_all_names(ClusterSpec),
+    HostClusterNameList=cluster_data:all_names(ClusterSpec),
     HostClusterNameList.
 
 

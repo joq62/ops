@@ -124,3 +124,16 @@ name_dir_list(HostName,ClusterName,ClusterSpec)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+all_pod_nodes(HostName,ClusterName,ClusterSpec)->
+    HostClusterPodNameList=all_names(HostName,ClusterName,ClusterSpec),  %{HostName,ClusterName,PodName}
+    HostClusterPodNamePodNodeList=[{HostName,ClusterName,PodName,item(node,PodInfo)}||{HostName,ClusterName,PodName}<-HostClusterPodNameList,
+										      PodInfo=info(HostName,ClusterName,PodName,ClusterSpec)],
+    HostClusterPodNamePodNodeList.
+    
+    
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------

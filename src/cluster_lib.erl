@@ -34,7 +34,7 @@
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% -------------------------------------------------------------------
 intent(ClusterSpec)->
-    WantedStateCluster=cluster_data:cluster_all_names(ClusterSpec),
+    WantedStateCluster=cluster_data:all_names(ClusterSpec),
     StatusCluster=[{is_node_present(HostName,ClusterName,ClusterSpec),HostName,ClusterName}||{HostName,ClusterName}<-WantedStateCluster],  
     MissingCluster=[{HostName,ClusterName}||{false,HostName,ClusterName}<-StatusCluster],
   
@@ -69,7 +69,7 @@ intent(ClusterSpec)->
 %% -------------------------------------------------------------------
 intent(WantedClusterName,ClusterSpec)->
 
-    WantedStateCluster=cluster_data:cluster_all_names(ClusterSpec),
+    WantedStateCluster=cluster_data:all_names(ClusterSpec),
     StatusCluster=[{is_node_present(HostName,ClusterName,ClusterSpec),HostName,ClusterName}||{HostName,ClusterName}<-WantedStateCluster,
 											     WantedClusterName=:=ClusterName],  
     MissingCluster=[{HostName,ClusterName}||{false,HostName,ClusterName}<-StatusCluster],
@@ -110,8 +110,8 @@ is_cluster_present(ClusterName)->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% -------------------------------------------------------------------
 is_node_present(HostName,ClusterName,ClusterSpec)->
-    {ok,Node}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
-    {ok,Cookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+    Node=cluster_data:item(node,HostName,ClusterName,ClusterSpec),
+    Cookie=cluster_data:item(cookie,HostName,ClusterName,ClusterSpec),
     case dist_lib:ping(node(),Cookie,Node) of
 	pang->
 	    false;
@@ -124,8 +124,8 @@ is_node_present(HostName,ClusterName,ClusterSpec)->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% -------------------------------------------------------------------
 start_node(HostName,ClusterName,ClusterSpec)->
-    {ok,ClusterCookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
-    {ok,ClusterDir}=cluster_data:cluster_spec(dir,HostName,ClusterName,ClusterSpec),
+    ClusterCookie=cluster_data:item(cookie,HostName,ClusterName,ClusterSpec),
+    ClusterDir=cluster_data:item(dir,HostName,ClusterName,ClusterSpec),
     create_node(HostName,ClusterName,ClusterCookie,ClusterDir).
 
 %% --------------------------------------------------------------------
@@ -156,9 +156,9 @@ create_node(HostName,ClusterNodeName,ClusterCookie,ClusterDir)->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% -------------------------------------------------------------------
 stop_node(HostName,ClusterName,ClusterSpec)->
-    {ok,Node}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
-    {ok,Cookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
-    {ok,Dir}=cluster_data:cluster_spec(dir,HostName,ClusterName,ClusterSpec),
+    Node=cluster_data:item(node,HostName,ClusterName,ClusterSpec),
+    Cookie=cluster_data:item(cookie,HostName,ClusterName,ClusterSpec),
+    Dir=cluster_data:item(dir,HostName,ClusterName,ClusterSpec),
     dist_lib:rmdir_r(Node,Cookie,Dir),
  %   io:format("Rm ~p~n",[{R,Dir,?MODULE,?FUNCTION_NAME}]),
     dist_lib:stop_node(HostName,ClusterName,Cookie),
@@ -201,8 +201,8 @@ all_services(WantedClusterName,ClusterSpec)->
     Result.
 		  
 node_cookie(HostName,ClusterName,ClusterSpec)->
-    {ok,Node}=cluster_data:cluster_spec(node,HostName,ClusterName,ClusterSpec),
-    {ok,Cookie}=cluster_data:cluster_spec(cookie,HostName,ClusterName,ClusterSpec),
+    Node=cluster_data:item(node,HostName,ClusterName,ClusterSpec),
+    Cookie=cluster_data:item(cookie,HostName,ClusterName,ClusterSpec),
     {Node,Cookie}.
 
 
