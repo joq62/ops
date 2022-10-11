@@ -19,11 +19,52 @@
 	 stop/5,
 	 unload/5,
 	 which_services/1,
+	 which_service/3,
+	 desired_state/0,
 	 is_loaded/5
 	]).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+desired_state()->
+    Spec=deployment_data:read_spec(),
+    AllNames=deployment_data:all_names(Spec), %[depname,depname2]
+    desired_state(AllNames,Spec,[]).
+    
+desired_state([],_,Acc)->
+    Acc;
+desired_state([DepName|T],Spec,Acc)->
+    ClusterName=deployment_data:item(cluster_name,DepName,Spec),
+    NumInstances=deployment_data:item(num_instances,DepName,Spec),
+    HostNameList=deployment_data:item(hostnames,DepName,Spec),
+    ServiceIdVsnList=deployment_data:item(services,DepName,Spec),
+    Result=desired_state(NumInstances,HostNameList,ClusterName,ServiceIdVsnList,[]),
+    NewAcc=lists:append(Result,Acc),
+    desired_state(T,Spec,NewAcc).
+    
+    %{"c100","c1","c1_0",'c1_0@c100',kernel,"6.5.1"},
+    
+desired_state(-1,_,_,_,Acc)->
+    Acc;
+desired_state(N,HostNameList,ClusterName,ServiceIdVsnList,Acc)->
+    L=[{HostName,ClusterName,N,list_to_atom(ServiceId)}||HostName<-HostNameList,
+						       {ServiceId,_}<-ServiceIdVsnList],
+    NewAcc=lists:append(L,Acc),
+    desired_state(N-1,HostNameList,ClusterName,ServiceIdVsnList,NewAcc).
+    
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+
+
+
 git_load(HostName,ClusterName,PodName,Appl,ClusterSpec)->
     {ok,PodInfo}=pod_data:pod_info_by_name(HostName,ClusterName,PodName,ClusterSpec),
     PodNode=pod_data:pod(node,PodInfo),
@@ -177,6 +218,33 @@ unload(PodNode,ClusterCookie,ApplDir)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+which_service(ServiceId,ClusterName,AllServicesList)->
+    which_service(ServiceId,ClusterName,AllServicesList,[]).
+
+which_service(_,_,[],Acc)->
+    lists:append(Acc);
+which_service(ServiceId,ClusterName,[AllServices|T],Acc)->  % AllServices=[[{HostName,ClusterName,PodName,Node,Service,Vsn}]]
+    WantedService=list_to_atom(ServiceId),
+    Result=[{HostName,
+	      CN,
+	      PodName,
+	      Node,
+	      Service,
+	      Vsn}||{HostName,CN,PodName,Node,Service,Vsn}<-AllServices,
+		    WantedService=:=Service,
+		    CN=:=ClusterName],
+    which_service(ServiceId,ClusterName,T,[Result|Acc]).
+    
+
+
+
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+
 which_services(ClusterName)->
     ClusterSpec=cluster_data:read_spec(),
     HostClusterList=[{HostName,CN}||{HostName,CN}<-cluster_data:all_names(ClusterSpec), % [{HostName,CluserName}]
@@ -201,11 +269,11 @@ which_services(ClusterName)->
     which_services(WhichServices,[]).
 which_services([],Acc)->
     Acc;
-which_services([{HostName,ClusterName,PodName,Node,{badrpc,nodedown}}|T],Acc)->
+which_services([{_,_,_,_,{badrpc,nodedown}}|T],Acc)->
     which_services(T,Acc);    
 which_services([{HostName,ClusterName,PodName,Node,ServiceList}|T],Acc)->
   %  io:format("ServiceList ~p~n",[{?MODULE,?LINE,ServiceList}]), 
-    L=[{HostName,ClusterName,PodName,Node,ServiceInfo}||ServiceInfo<-ServiceList], 
+    L=[{HostName,ClusterName,PodName,Node,Service,Vsn}||{Service,_,Vsn}<-ServiceList], 
     NewAcc=lists:append(L,Acc),
     which_services(T,NewAcc).    
 
