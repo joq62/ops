@@ -21,11 +21,45 @@
 	 which_services/1,
 	 which_service/3,
 	 desired_state/0,
+	 desired_state/1,
+	 intent/1,
 	 is_loaded/5
 	]).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+intent(ClusterName)->
+    DesiredState=desired_state(ClusterName),        %[{HostName,CluserName,N,Service}]
+    ActiveServicesList=which_services(ClusterName), %[{HostName,ClusterName,PodName,PodNode,Service,Vsn}]
+    remove_equal(DesiredState,ActiveServicesList).
+
+remove_equal(List,[])->
+    List;
+remove_equal(List,[{HostName1,ClusterName1,_PodName,_PodNode,Service1,_Vsn}|T])->
+    NewList=[{HostName,
+	      CluserName,
+	      N,
+	      Service}||{HostName,CluserName,N,Service}<-List,
+			{HostName,CluserName,Service}/={HostName1,ClusterName1,Service1}],
+    remove_equal(NewList,T).
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+desired_state(ClusterName)->
+    AllDesiredState=desired_state(), %[{ClusterName,[{HostName,ClusterName,N,Service}]}]]
+    List=[DesiredState||
+	     {CN,DesiredState}<-AllDesiredState,
+	     CN=:=ClusterName],
+    lists:append(List).
+
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
@@ -44,13 +78,13 @@ desired_state([DepName|T],Spec,Acc)->
     HostNameList=deployment_data:item(hostnames,DepName,Spec),
     ServiceIdVsnList=deployment_data:item(services,DepName,Spec),
     Result=desired_state(NumInstances,HostNameList,ClusterName,ServiceIdVsnList,[]),
-    NewAcc=lists:append(Result,Acc),
+    NewAcc=[Result|Acc],
     desired_state(T,Spec,NewAcc).
     
     %{"c100","c1","c1_0",'c1_0@c100',kernel,"6.5.1"},
     
-desired_state(-1,_,_,_,Acc)->
-    Acc;
+desired_state(-1,_,ClusterName,_,Acc)->
+    {ClusterName,Acc};
 desired_state(N,HostNameList,ClusterName,ServiceIdVsnList,Acc)->
     L=[{HostName,ClusterName,N,list_to_atom(ServiceId)}||HostName<-HostNameList,
 						       {ServiceId,_}<-ServiceIdVsnList],

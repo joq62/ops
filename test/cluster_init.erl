@@ -82,26 +82,39 @@ pod_start_test()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
 
     {
-     [{ok,{"c201","c1","c1_cookie",c1_3@c201,"c1.dir/c1_3"}},
-      {ok,{"c201","c1","c1_cookie",c1_2@c201,"c1.dir/c1_2"}},
-      {ok,{"c201","c1","c1_cookie",c1_1@c201,"c1.dir/c1_1"}},
-      {ok,{"c201","c1","c1_cookie",c1_0@c201,"c1.dir/c1_0"}},
-      {error,[pod_lib,create,_,[badrpc,nodedown],c1@c200,"c1.dir/c1_3"]},
-      {error,[pod_lib,create,_,[badrpc,nodedown],c1@c200,"c1.dir/c1_2"]},
-      {error,[pod_lib,create,_,[badrpc,nodedown],c1@c200,"c1.dir/c1_1"]},
-      {error,[pod_lib,create,_,[badrpc,nodedown],c1@c200,"c1.dir/c1_0"]},
-      {ok,{"c100","c1","c1_cookie",c1_3@c100,"c1.dir/c1_3"}},
-      {ok,{"c100","c1","c1_cookie",c1_2@c100,"c1.dir/c1_2"}},
-      {ok,{"c100","c1","c1_cookie",c1_1@c100,"c1.dir/c1_1"}},
-      {ok,{"c100","c1","c1_cookie",c1_0@c100,"c1.dir/c1_0"}},
-      {ok,{"c100","c2","c2_cookie",c2_2@c100,"c2.dir/c2_2"}},
-      {ok,{"c100","c2","c2_cookie",c2_1@c100,"c2.dir/c2_1"}},
-      {ok,{"c100","c2","c2_cookie",c2_0@c100,"c2.dir/c2_0"}}],
-     [{"c200","c1_3","c1"},{"c200","c1_2","c1"}, {"c200","c1_1","c1"},{"c200","c1_0","c1"}],
-     [{"c201","c1_3","c1"},{"c201","c1_2","c1"},{"c201","c1_1","c1"},{"c201","c1_0","c1"},
+     [{ok,{"c201","c1","c1_cookie",'c1_3@c201',"c1.dir/c1_3"}},{ok,{"c201","c1","c1_cookie",'c1_2@c201',"c1.dir/c1_2"}},
+      {ok,{"c201","c1","c1_cookie",'c1_1@c201',"c1.dir/c1_1"}},{ok,{"c201","c1","c1_cookie",'c1_0@c201',"c1.dir/c1_0"}},
+      {error,[pod_lib,create,126,[badrpc,nodedown],'c1@c200',"c1.dir/c1_3"]},{error,[pod_lib,create,126,[badrpc,nodedown],'c1@c200',"c1.dir/c1_2"]},
+      {error,[pod_lib,create,126,[badrpc,nodedown],'c1@c200',"c1.dir/c1_1"]},{error,[pod_lib,create,126,[badrpc,nodedown],'c1@c200',"c1.dir/c1_0"]},
+      {ok,{"c100","c1","c1_cookie",'c1_3@c100',"c1.dir/c1_3"}},{ok,{"c100","c1","c1_cookie",'c1_2@c100',"c1.dir/c1_2"}},
+      {ok,{"c100","c1","c1_cookie",'c1_1@c100',"c1.dir/c1_1"}},{ok,{"c100","c1","c1_cookie",'c1_0@c100',"c1.dir/c1_0"}},
+      {ok,{"c100","c2","c2_cookie",'c2_2@c100',"c2.dir/c2_2"}},{ok,{"c100","c2","c2_cookie",'c2_1@c100',"c2.dir/c2_1"}},
+      {ok,{"c100","c2","c2_cookie",'c2_0@c100',"c2.dir/c2_0"}},{ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_10@c201',"lgh_1.dir/lgh_1_10"}},
+      {ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_9@c201',"lgh_1.dir/lgh_1_9"}},{ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_8@c201',"lgh_1.dir/lgh_1_8"}},
+      {ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_7@c201',"lgh_1.dir/lgh_1_7"}},{ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_6@c201',"lgh_1.dir/lgh_1_6"}},
+      {ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_5@c201',"lgh_1.dir/lgh_1_5"}},{ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_4@c201',"lgh_1.dir/lgh_1_4"}},
+      {ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_3@c201',"lgh_1.dir/lgh_1_3"}},{ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_2@c201',"lgh_1.dir/lgh_1_2"}},
+      {ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_1@c201',"lgh_1.dir/lgh_1_1"}},{ok,{"c201","lgh_1","lgh_1_cookie",'lgh_1_0@c201',"lgh_1.dir/lgh_1_0"}},
+      {error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_10"]},{error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_9"]},
+      {error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_8"]},{error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_7"]},
+      {error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_6"]},{error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_5"]},
+      {error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_4"]},{error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_3"]},
+      {error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_2"]},{error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_1"]},
+      {error,[pod_lib,create,126,[badrpc,nodedown],'lgh_1@c200',"lgh_1.dir/lgh_1_0"]}
+     ],
+     [
+      {"c200","c1_3","c1"},{"c200","c1_2","c1"},{"c200","c1_1","c1"},{"c200","c1_0","c1"},
+      {"c200","lgh_1_10","lgh_1"},{"c200","lgh_1_9","lgh_1"},{"c200","lgh_1_8","lgh_1"},{"c200","lgh_1_7","lgh_1"},{"c200","lgh_1_6","lgh_1"},{"c200","lgh_1_5","lgh_1"},
+      {"c200","lgh_1_4","lgh_1"},{"c200","lgh_1_3","lgh_1"},{"c200","lgh_1_2","lgh_1"},{"c200","lgh_1_1","lgh_1"},{"c200","lgh_1_0","lgh_1"}
+     ],
+     [
+      {"c201","c1_3","c1"},{"c201","c1_2","c1"},{"c201","c1_1","c1"},{"c201","c1_0","c1"},
       {"c100","c1_3","c1"},{"c100","c1_2","c1"},{"c100","c1_1","c1"},{"c100","c1_0","c1"},
-      {"c100","c2_2","c2"},{"c100","c2_1","c2"},{"c100","c2_0","c2"}]
-    }=ops:pod_intent(),
+      {"c100","c2_2","c2"},{"c100","c2_1","c2"},{"c100","c2_0","c2"},
+      {"c201","lgh_1_10","lgh_1"},{"c201","lgh_1_9","lgh_1"},{"c201","lgh_1_8","lgh_1"},{"c201","lgh_1_7","lgh_1"},{"c201","lgh_1_6","lgh_1"},
+      {"c201","lgh_1_5","lgh_1"},{"c201","lgh_1_4","lgh_1"},{"c201","lgh_1_3","lgh_1"},{"c201","lgh_1_2","lgh_1"},{"c201","lgh_1_1","lgh_1"},
+      {"c201","lgh_1_0","lgh_1"}
+     ]}=ops:pod_intent(),
     
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
     ok.
@@ -117,10 +130,12 @@ cluster_start_test()->
     HostClusterNameList=lists:sort(ops:cluster_names()),
     StartAll= [ops:create_cluster_node(HostName,ClusterName)||{HostName,ClusterName}<-HostClusterNameList],
    % io:format("HostClusterNameList ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,HostClusterNameList}]),
-    [{ok,{"c100","c1",'c1@c100',"c1_cookie","c1.dir"}},
+    [{error,[["c200","c1","c1_cookie",[ehostunreach,my_ssh,ssh_send,26]],"c200","c1","c1_cookie"]},
+     {error,[["c200","lgh_1","lgh_1_cookie",[ehostunreach,my_ssh,ssh_send,26]],"c200","lgh_1","lgh_1_cookie"]},
+     {ok,{"c100","c1",'c1@c100',"c1_cookie","c1.dir"}},
      {ok,{"c100","c2",'c2@c100',"c2_cookie","c2.dir"}},
-     {error,[["c200","c1","c1_cookie",[ehostunreach,my_ssh,ssh_send,26]],"c200","c1","c1_cookie"]},
-     {ok,{"c201","c1",'c1@c201',"c1_cookie","c1.dir"}}]=StartAll,
+     {ok,{"c201","c1",'c1@c201',"c1_cookie","c1.dir"}},
+     {ok,{"c201","lgh_1",'lgh_1@c201',"lgh_1_cookie","lgh_1.dir"}}]=lists:sort(StartAll),
     
    
   %  (cluster_nodes),
@@ -148,7 +163,9 @@ cluster_stop_test()->
     [{ok,"c100","c1"},
      {ok,"c100","c2"},
      {ok,"c200","c1"},
-     {ok,"c201","c1"}]=StopAll,
+     {ok,"c200","lgh_1"},
+     {ok,"c201","c1"},
+     {ok,"c201","lgh_1"}]=lists:sort(StopAll),
     
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
     ok.
