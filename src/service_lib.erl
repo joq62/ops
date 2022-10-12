@@ -36,7 +36,29 @@
 intent(ClusterName)->
     DesiredState=desired_state(ClusterName),        %[{HostName,CluserName,N,Service}]
     ActiveServicesList=which_services(ClusterName), %[{HostName,ClusterName,PodName,PodNode,Service,Vsn}]
-    remove_equal(DesiredState,ActiveServicesList).
+    MissingServices=remove_equal(DesiredState,ActiveServicesList),
+    start_service(MissingServices,[]).
+
+start_service([],Acc)->
+    Acc;
+start_service([{HostName,ClusterName,N,Service}|T],Acc)->
+    % Get Free PodName
+    FreePodList=pod_lib:get_free_pod(HostName,ClusterName,Service),
+    R=case FreePodList of
+	  []->
+	      {error,[no_pods_available,HostName,ClusterName,Service]};
+	  [PodName|_] ->
+	      Appl=atom_to_list(Service),
+	      ClusterSpec=1/0,
+	      git_load(HostName,ClusterName,PodName,Appl,ClusterSpec),
+	      case start(HostName,ClusterName,PodName,Appl,ClusterSpec) of
+		  ok->
+		      {ok,HostName,ClusterName,N,Service};
+		  Reason ->
+		      {error,[Reason]}
+	      end
+      end,
+    start_service(T,[R|Acc]).
 
 remove_equal(List,[])->
     List;

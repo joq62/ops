@@ -51,19 +51,28 @@ intent()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),    
     ClusterName="c1",
     Intent=service_lib:intent(ClusterName),
-    [
-     {"c100","c1",0,test_add},
-     {"c201","c1",0,test_add},
-     {"c100","c1",1,test_add},
-     {"c201","c1",1,test_add},
-     {"c100","c1",2,test_add},
-     {"c201","c1",2,test_add},
-     {"c100","c1",0,sd},{"c100","c1",0,nodelog},
-     {"c200","c1",0,sd},{"c200","c1",0,nodelog},
-     {"c201","c1",0,sd},{"c201","c1",0,nodelog},
-     {"c100","c1",1,sd},{"c100","c1",1,nodelog},
-     {"c200","c1",1,sd},{"c200","c1",1,nodelog},
-     {"c201","c1",1,sd},{"c201","c1",1,nodelog}]=Intent,
+   [
+    {"c100","c1",0,nodelog},
+    {"c100","c1",0,sd},
+    {"c100","c1",0,test_add},
+    {"c100","c1",1,nodelog},
+    {"c100","c1",1,sd},
+    {"c100","c1",1,test_add},
+    {"c100","c1",2,test_add},
+    {"c200","c1",0,nodelog},
+    {"c200","c1",0,sd},
+    {"c200","c1",1,nodelog},
+    {"c200","c1",1,sd},
+    {"c201","c1",0,nodelog},
+    {"c201","c1",0,sd},
+    {"c201","c1",0,test_add},
+    {"c201","c1",1,nodelog},
+    {"c201","c1",1,sd},
+    {"c201","c1",1,test_add},
+    {"c201","c1",2,test_add}
+   ]=lists:sort(Intent),
+
+    
     
 
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
