@@ -28,13 +28,13 @@
 start()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
 
-    ok=desired_state(),
-    ok=desired_state_2(),
+  %  ok=desired_state(),
+  %  ok=desired_state_2(),
     ok=setup(),
-    ok=intent(),
+  %  ok=intent(),
   
-    {ok,AllServicesList}=which_services(),
-    ok=which_service(AllServicesList),
+  %  {ok,AllServicesList}=which_services(),
+  %  ok=which_service(AllServicesList),
 
     io:format("Test OK !!! ~p~n",[?MODULE]),
     cluster_stop_test(),
@@ -219,6 +219,108 @@ remove([{_HostName,ClusterName}|T],Acc)->
     remove(T,NewAcc).
    
 
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+-define(SourceDepFile,"./test/specs/deployment_2.spec").
+-define(DepFile,"deployment.spec").
+-define(SourceClusterFile,"./test/specs/cluster_2.spec").
+-define(ClusterFile,"cluster.spec").
+	 	 
+
+setup()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+
+    file:delete(?ClusterFile),
+    {ok,ClusterBin}=file:read_file(?SourceClusterFile),
+    ok=file:write_file(?ClusterFile,ClusterBin),
+    
+    file:delete(?DepFile),
+    {ok,DepBin}=file:read_file(?SourceDepFile),
+    ok=file:write_file(?DepFile,DepBin),
+    
+    ok=application:start(ops),
+    ok=cluster_stop_test(),
+    ok=cluster_start_test(),
+    ok=pod_start_test(),
+    
+    
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+
+    ok.
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+pod_start_test()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+
+    
+    {[{ok,{"c201","test_1","test_1_cookie",'test_1_6@c201',"test_1.dir/test_1_6"}},
+      {ok,{"c201","test_1","test_1_cookie",'test_1_5@c201',"test_1.dir/test_1_5"}},
+      {ok,{"c201","test_1","test_1_cookie",'test_1_4@c201',"test_1.dir/test_1_4"}},
+      {ok,{"c201","test_1","test_1_cookie",'test_1_3@c201',"test_1.dir/test_1_3"}},
+      {ok,{"c201","test_1","test_1_cookie",'test_1_2@c201',"test_1.dir/test_1_2"}},
+      {ok,{"c201","test_1","test_1_cookie",'test_1_1@c201',"test_1.dir/test_1_1"}},
+      {ok,{"c201","test_1","test_1_cookie",'test_1_0@c201',"test_1.dir/test_1_0"}},
+      {ok,{"c200","test_1","test_1_cookie",'test_1_6@c200',"test_1.dir/test_1_6"}},
+      {ok,{"c200","test_1","test_1_cookie",'test_1_5@c200',"test_1.dir/test_1_5"}},
+      {ok,{"c200","test_1","test_1_cookie",'test_1_4@c200',"test_1.dir/test_1_4"}},
+      {ok,{"c200","test_1","test_1_cookie",'test_1_3@c200',"test_1.dir/test_1_3"}},
+      {ok,{"c200","test_1","test_1_cookie",'test_1_2@c200',"test_1.dir/test_1_2"}},
+      {ok,{"c200","test_1","test_1_cookie",'test_1_1@c200',"test_1.dir/test_1_1"}},
+      {ok,{"c200","test_1","test_1_cookie",'test_1_0@c200',"test_1.dir/test_1_0"}},
+      {ok,{"c100","test_1","test_1_cookie",'test_1_6@c100',"test_1.dir/test_1_6"}},
+      {ok,{"c100","test_1","test_1_cookie",'test_1_5@c100',"test_1.dir/test_1_5"}},
+      {ok,{"c100","test_1","test_1_cookie",'test_1_4@c100',"test_1.dir/test_1_4"}},
+      {ok,{"c100","test_1","test_1_cookie",'test_1_3@c100',"test_1.dir/test_1_3"}},
+      {ok,{"c100","test_1","test_1_cookie",'test_1_2@c100',"test_1.dir/test_1_2"}},
+      {ok,{"c100","test_1","test_1_cookie",'test_1_1@c100',"test_1.dir/test_1_1"}},
+      {ok,{"c100","test_1","test_1_cookie",'test_1_0@c100',"test_1.dir/test_1_0"}}],
+     [],
+     [{"c201","test_1_6","test_1"},{"c201","test_1_5","test_1"},{"c201","test_1_4","test_1"},{"c201","test_1_3","test_1"},
+      {"c201","test_1_2","test_1"},{"c201","test_1_1","test_1"},{"c201","test_1_0","test_1"},
+      {"c200","test_1_6","test_1"},{"c200","test_1_5","test_1"},{"c200","test_1_4","test_1"},
+      {"c200","test_1_3","test_1"},{"c200","test_1_2","test_1"},{"c200","test_1_1","test_1"},{"c200","test_1_0","test_1"},
+      {"c100","test_1_6","test_1"},{"c100","test_1_5","test_1"},{"c100","test_1_4","test_1"},{"c100","test_1_3","test_1"},
+      {"c100","test_1_2","test_1"},{"c100","test_1_1","test_1"},{"c100","test_1_0","test_1"}]}=ops:pod_intent(),
+    
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
+ 
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+cluster_start_test()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+
+    HostClusterNameList=lists:sort(ops:cluster_names()),
+    StartAll= [ops:create_cluster_node(HostName,ClusterName)||{HostName,ClusterName}<-HostClusterNameList],
+   % io:format("HostClusterNameList ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,HostClusterNameList}]),
+    [{ok,{"c100","test_1",'test_1@c100',"test_1_cookie","test_1.dir"}},
+     {ok,{"c200","test_1",'test_1@c200',"test_1_cookie","test_1.dir"}},
+     {ok,{"c201","test_1",'test_1@c201',"test_1_cookie","test_1.dir"}}
+    ]=lists:sort(StartAll),
+    
+   
+  %  (cluster_nodes),
+   % PodNameDirList=erlang:get(pod_name_dir_list),
+       
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
@@ -229,27 +331,9 @@ cluster_stop_test()->
 
     HostClusterNameList=lists:sort(ops:cluster_names()),
     StopAll= [{ops:delete_cluster_node(HostName,ClusterName),HostName,ClusterName}||{HostName,ClusterName}<-HostClusterNameList],
-    [{ok,"c100","c1"},
-     {ok,"c100","c2"},
-     {ok,"c200","c1"},
-     {ok,"c200","lgh_1"},
-     {ok,"c201","c1"},
-     {ok,"c201","lgh_1"}]=lists:sort(StopAll),
+    [{ok,"c100","test_1"},
+     {ok,"c200","test_1"},
+     {ok,"c201","test_1"}]=lists:sort(StopAll),
     
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
-    ok.
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-
-
-setup()->
-    io:format("Start ~p~n",[?FUNCTION_NAME]),
-
-    cluster_init:start(),
-    
-    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
-
     ok.

@@ -26,7 +26,8 @@
 	 is_pod_node_present/4,
 	 pod_name_dir_list/3,
 	 pod_intent/1,
-	 pod_intent/2
+	 pod_intent/2,
+	 pod_candidates/2
 
 
 	]).
@@ -46,6 +47,30 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+
+%% --------------------------------------------------------------------
+%% Function:start/0 
+%% Description: Initiate the eunit tests, set upp needed processes etc
+%% Returns: non
+%% -------------------------------------------------------------------
+%% [part_of, not_part_of,present,not_present]
+%%
+%% any_host,same_host,not_same_host,this_host
+%% same_pod,not_same_pod
+%% num_instances
+%% Services must not be loaded on the pod (conflict)
+%% 
+
+%%
+
+%%
+pod_candidates(Constraints,ClusterSpec)->
+    
+    {not_implmented,Constraints,ClusterSpec}.
+
+
+
+
 
 %% --------------------------------------------------------------------
 %% Function:start/0 

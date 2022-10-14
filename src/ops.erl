@@ -20,7 +20,7 @@
 %% External exports
 
 
-
+%% Cluster
 -export([
 	 create_cluster_node/2,
 	 delete_cluster_node/2,
@@ -30,15 +30,18 @@
 	 cluster_intent/1
 	]).
 
+%% Pods
 -export([
 	 create_pod_node/3,
 	 delete_pod_node/3,
 	 is_pod_node_present/3,
 	 pod_name_dir_list/2,
 	 pod_intent/0,
-	 pod_intent/1
+	 pod_intent/1,
+	 pod_candidates/1
 	]).
 
+%% Services
 -export([
 	 git_load_service/4,
 	 load_service/4,
@@ -46,7 +49,8 @@
 	 stop_service/4,
 	 unload_service/4,
 	 is_service_running/4,
-	 is_service_loaded/4
+	 is_service_loaded/4,
+	 service_intent/1
 	]).
 
 
@@ -104,7 +108,11 @@ pod_name_dir_list(HostName,ClusterName)->
 pod_intent()->
     gen_server:call(?MODULE,{pod_intent},infinity). 
 pod_intent(ClusterName)->
-    gen_server:call(?MODULE,{pod_intent,ClusterName},infinity).   
+    gen_server:call(?MODULE,{pod_intent,ClusterName},infinity).  
+pod_candidates(Constraints)->
+    gen_server:call(?MODULE,{pod_candidates,Constraints},infinity).  
+
+ 
 
 %% --------------------------------------------------------------------
 
@@ -123,8 +131,12 @@ is_service_loaded(HostName,ClusterName,PodName,Service)->
 is_service_running(HostName,ClusterName,PodName,Service)->
     gen_server:call(?MODULE,{is_service_running,HostName,ClusterName,PodName,Service},infinity). 
 
+service_intent(ClusterName)->
+    gen_server:call(?MODULE,{service_intent,ClusterName},infinity). 
+
+
   
-    
+	    
 %% call
 start()-> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 stop()-> gen_server:call(?MODULE, {stop},infinity).
@@ -194,6 +206,10 @@ handle_call({is_service_loaded,HostName,ClusterName,PodName,Service},_From, Stat
     Reply=ops_misc:is_service_loaded(HostName,ClusterName,PodName,Service,State#state.cluster_spec),
     {reply, Reply, State};
 
+handle_call({service_intent,ClusterName},_From, State) ->
+    Reply=ops_misc:service_intent(ClusterName,State#state.cluster_spec),
+    {reply, Reply, State};
+
 
   
 %% --------------------------------------------------------------------
@@ -234,6 +250,10 @@ handle_call({deployment_spec},_From, State) ->
 
  
 %% --------------------------------------------------------------------
+
+handle_call({pod_candidates,Constraints},_From, State) ->
+    Reply=ops_misc:pod_candidates(Constraints,State#state.cluster_spec),
+    {reply, Reply, State};
 
 handle_call({pod_intent},_From, State) ->
     Reply=ops_misc:pod_intent(State#state.cluster_spec),

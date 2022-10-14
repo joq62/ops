@@ -118,9 +118,6 @@ desired_state(N,HostNameList,ClusterName,ServiceIdVsnList,Acc)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-
-
-
 git_load(HostName,ClusterName,PodName,Appl,ClusterSpec)->
     {ok,PodInfo}=pod_data:pod_info_by_name(HostName,ClusterName,PodName,ClusterSpec),
     PodNode=pod_data:pod(node,PodInfo),

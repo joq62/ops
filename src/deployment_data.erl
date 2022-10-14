@@ -15,7 +15,7 @@
 -export([
 	 read_spec/0,
 	 read_spec/1,
-	 create/5,
+	 create/7,
 	 all_names/1,
 	 info/2,
 	 item/3
@@ -28,7 +28,8 @@
 			 deploy_name,
 			 cluster_name,
 			 num_instances,
-			 hostnames,
+			 host,       
+			 pod,
 			 services
 			}).
 		
@@ -59,11 +60,18 @@ read_spec(DeploymentSpecFile)->
 	       {error,Reason}->
 		   {error,Reason};
 	       {ok,I}->
-		   [create(DeployName,ClusterName,NumInstances,HostNames,Services)||{{deploy_name,DeployName},
-										     {cluster_name,ClusterName},
-										     {num_instances,NumInstances},
-										     {hostnames,HostNames},
-										     {services,Services}}<-I]
+		   [create(DeployName,
+			   ClusterName,
+			   NumInstances,
+			   HostConstraints,
+			   HostNames,
+			   PodConstraint,
+			   Services)||{{deploy_name,DeployName},
+				       {cluster_name,ClusterName},
+				       {num_instances,NumInstances},
+				       {host,{HostConstraints,HostNames}},
+				       {pod,PodConstraint},
+				       {services,Services}}<-I]
 	   end,
     Result.
 
@@ -72,11 +80,13 @@ read_spec(DeploymentSpecFile)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-create(DeployName,ClusterName,NumInstances,HostNames,Services)->
+create(DeployName,ClusterName,NumInstances,HostConstraints,
+       HostNames, PodConstraint,Services)->
     #deployment_spec{deploy_name=DeployName,
 		     cluster_name=ClusterName,
 		     num_instances=NumInstances,
-		     hostnames=HostNames,
+		     host={HostConstraints,HostNames},
+		     pod=PodConstraint,
 		     services=Services}.
 
 %% --------------------------------------------------------------------
@@ -120,7 +130,13 @@ item(Key,DeploymentName,DeploymentSpec)->
 		       num_instances->
 			   X#deployment_spec.num_instances;
 		       hostnames->
-			   X#deployment_spec.hostnames;
+			   {_,HostNames}=X#deployment_spec.host,
+			   HostNames;
+		       host_constraints->
+			   {HostConstraints,_}=X#deployment_spec.host,
+			   HostConstraints;
+		       pod_constraints->
+			   X#deployment_spec.pod;
 		       services->
 			   X#deployment_spec.services;
 		       Eexists->
