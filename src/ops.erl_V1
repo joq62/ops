@@ -159,7 +159,7 @@ ping()->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
-    
+
     ok=application:start(config),
     ClusterSpec=cluster_data:read_spec(),
       

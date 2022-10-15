@@ -120,6 +120,7 @@ info(DeploymentName,DeploymentSpec)->
 item(Key,DeploymentName,DeploymentSpec)->
     R=[I||I<-DeploymentSpec,
 	  DeploymentName=:=I#deployment_spec.deploy_name],
+  
     Result=case R of
 	       []->
 		   {error,[eexists,DeploymentName]};
@@ -141,9 +142,11 @@ item(Key,DeploymentName,DeploymentSpec)->
 			   X#deployment_spec.services;
 		       Eexists->
 			   {error,[eexists,Eexists]}
-		   end
+		   end;
+	       Reason ->
+		   {error,[case_clause,Reason]}
 	   end,
-       Result.
+    Result.
 
 
 %% --------------------------------------------------------------------

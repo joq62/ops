@@ -12,7 +12,6 @@
 -module(service_lib).   
   
 -export([
-
 	 git_load/4,
 	 git_load/5,
 	 load/5,
@@ -29,8 +28,6 @@
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
-
-
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
@@ -79,13 +76,11 @@ remove_equal(List,[{HostName1,ClusterName1,_PodName,_PodNode,Service1,_Vsn}|T])-
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
 desired_state(ClusterName)->
-    AllDesiredState=desired_state(), %[{HostName,ClusterName,NumInstances,HostConstraints,PodConstraint,list_to_atom(ServiceId)}}]]
-  %  io:format("AllDesiredState ~p~n",[{?MODULE,?LINE,AllDesiredState}]),
-  %  io:format(" ~p~n",["**********************************************************"]),
-    AllDeploymentDesiredState=[DeploymentDesiredState||
-				  {CN,DeploymentDesiredState}<-AllDesiredState,
-				  CN=:=ClusterName],
-    lists:append(AllDeploymentDesiredState).
+    AllDesiredState=desired_state(), %[{ClusterName,[{HostName,ClusterName,N,Service}]}]]
+    List=[DesiredState||
+	     {CN,DesiredState}<-AllDesiredState,
+	     CN=:=ClusterName],
+    lists:append(List).
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -102,23 +97,21 @@ desired_state([],_,Acc)->
 desired_state([DepName|T],Spec,Acc)->
     ClusterName=deployment_data:item(cluster_name,DepName,Spec),
     NumInstances=deployment_data:item(num_instances,DepName,Spec),
-    HostNames=lists:sort(deployment_data:item(hostnames,DepName,Spec)),
-    HostConstraints=lists:sort(deployment_data:item(host_constraints,DepName,Spec)),
-
-    PodConstraint=deployment_data:item(pod_constraints,DepName,Spec),
+    HostNameList=deployment_data:item(hostnames,DepName,Spec),
     ServiceIdVsnList=deployment_data:item(services,DepName,Spec),
-    Result=desired_state(NumInstances,HostNames,ClusterName,HostConstraints,PodConstraint,ServiceIdVsnList,[]),
+    Result=desired_state(NumInstances,HostNameList,ClusterName,ServiceIdVsnList,[]),
     NewAcc=[Result|Acc],
     desired_state(T,Spec,NewAcc).
     
-      
-desired_state(-1,_,ClusterName,_,_,_,Acc)->
+    %{"c100","c1","c1_0",'c1_0@c100',kernel,"6.5.1"},
+    
+desired_state(-1,_,ClusterName,_,Acc)->
     {ClusterName,Acc};
-desired_state(NumInstances,HostNames,ClusterName,HostConstraints,PodConstraint,ServiceIdVsnList,Acc)->
-    L=[{ClusterName,NumInstances,HostNames,HostConstraints,PodConstraint,list_to_atom(ServiceId)}||HostName<-HostNames,
-												  {ServiceId,_}<-ServiceIdVsnList],
+desired_state(N,HostNameList,ClusterName,ServiceIdVsnList,Acc)->
+    L=[{HostName,ClusterName,N,list_to_atom(ServiceId)}||HostName<-HostNameList,
+						       {ServiceId,_}<-ServiceIdVsnList],
     NewAcc=lists:append(L,Acc),
-    desired_state(NumInstances-1,HostNames,ClusterName,HostConstraints,PodConstraint,ServiceIdVsnList,NewAcc).
+    desired_state(N-1,HostNameList,ClusterName,ServiceIdVsnList,NewAcc).
     
 %% --------------------------------------------------------------------
 %% Function: available_hosts()

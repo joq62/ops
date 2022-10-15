@@ -1,6 +1,6 @@
 %%% -------------------------------------------------------------------
 %%% @author  : Joq Erlang
-%%% @doc: : a
+%%% @doc: : 
 %%% Created :
 %%% Node end point  
 %%% Creates and deletes Pods
@@ -9,35 +9,36 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(service_test).    
+-module(cand_test).   
  
 -export([start/0]).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
--define(HostName,"c100").
--define(ClusterName,"test_cluster").
--define(PodName,"test_cluster_6").
-	 
+
+-define(Id_c1,"c1").
+
+
+		 
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-start()->
-    io:format("Start ~p~n",[?FUNCTION_NAME]),
+-define(HostNames,["c100","c300","c200","c201"]).
+-define(HostName,"c100").
+-define(ClusterName,"test_cluster").
+-define(DeplName,"any_not_same_hosts_not_same_pods").
 
+start()->
+   
     ok=setup(),
 
-    ok=candidates(),
- 
-       
-%    {ok,AllServicesList}=which_services(?ClusterName),
+    ok=host_candidates(),
+    ok=pod_candidates(),
   
     io:format("Test OK !!! ~p~n",[?MODULE]),
-    cluster_stop_test(),
-    timer:sleep(3000),
     init:stop(),
     ok.
 
@@ -46,62 +47,141 @@ start()->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-intent()->
-    io:format("Start ~p~n",[?FUNCTION_NAME]),    
-      
-
-    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
-    ok.
-
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-candidates()->
-     io:format("Start ~p~n",[?FUNCTION_NAME]),    
-  
-    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
-    ok.
-
-
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-which_services(ClusterName)->
+pod_candidates()->
     io:format("Start ~p~n",[?FUNCTION_NAME]),
     
-    AllServicesList=lists:sort(service_lib:which_services(ClusterName)),
+    Spec=deployment_data:read_spec(),
 
-    []=AllServicesList,
+    NumInstances=deployment_data:item(num_instances,"any_not_same_hosts_not_same_pods",Spec),
+    ServiceList=deployment_data:item(services,"any_not_same_hosts_not_same_pods",Spec),
     
-        
+    gl=candidates:pods(NumInstances,?HostName,?ClusterName,ServiceList),
+    
+    
+
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
-    {ok,AllServicesList}.
+    ok.
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-remove([])->
-    [];
-remove(L)->
-    lists:reverse(remove(L,[])).
+host_candidates()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
 
-remove([],Acc)->
-    Acc;
-remove([{_HostName,ClusterName}|T],Acc)->
-    NewAcc=case lists:member(ClusterName,Acc) of
-	       true->
-		   Acc;
-	       false->
-		   [ClusterName|Acc]
-	   end,
-    remove(T,NewAcc).
-   
+
+    ok=candidates(),
+    ok=candidates(1),
+    ok=candidates(2),
+    ok=candidates(3),
+    ok=candidates(4),
+    ok=candidates(5),
+    
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
+ 
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------   
+candidates()->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+    Spec=deployment_data:read_spec(),
+    AllNames=deployment_data:all_names(Spec),
+    [{"this_host_not_same_pod",["c100"]},
+     {"any_same_host_same_pod",["c100","c200","c201"]},
+     {"any_same_host_not_same_pod",["c100","c200","c201"]},
+     {"any_not_same_hosts_not_same_pods",[
+					  ["c200","c100"],
+					  ["c201","c100"],
+					  ["c201","c200"]]}
+    ]=[{DeplName,candidates:hostnames(DeplName)}||DeplName<-AllNames],
+    
+    
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+candidates(1)->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+  
+    ["c100","c300","c200","c201"]=candidates:hostnames(1,?HostNames),
+       
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok;
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+candidates(2)->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+  
+   [["c300","c100"],
+    ["c300","c200"],
+    ["c300","c201"],
+    ["c200","c100"],
+    ["c201","c100"],
+    ["c201","c200"]]=candidates:hostnames(2,?HostNames),
+       
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok;
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+candidates(3)->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+  
+  [["c300","c200","c100"],
+   ["c300","c201","c100"],
+   ["c300","c201","c200"],
+   ["c201","c200","c100"]
+  ]=candidates:hostnames(3,?HostNames),
+       
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok;
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+candidates(4)->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+  
+     {error,[too_many_instances_vs_hosts,0]}=candidates:hostnames(4,?HostNames),
+       
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok;
+ 
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+candidates(5)->
+    io:format("Start ~p~n",[?FUNCTION_NAME]),
+  
+   {error,[too_many_instances_vs_hosts,1]}=candidates:hostnames(5,?HostNames),
+       
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
+
+ 
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
 
 
 %% --------------------------------------------------------------------
@@ -125,69 +205,8 @@ setup()->
     file:delete(?DepFile),
     {ok,DepBin}=file:read_file(?SourceDepFile),
     ok=file:write_file(?DepFile,DepBin),
-    
-    ok=application:start(ops),
-    ok=cluster_stop_test(),
-    ok=cluster_start_test(),
-    ok=pod_start_test(),
-    
-    
-    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
-
-    ok.
-
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-pod_start_test()->
-    io:format("Start ~p~n",[?FUNCTION_NAME]),
-
-    
-    {[{ok,{"c201","test_cluster","test_cluster_cookie",'test_cluster_6@c201',"test_cluster.dir/test_cluster_6"}}|_],
-     [],
-     [{"c201","test_cluster_6","test_cluster"}|_]}=ops:pod_intent(),
-    
-    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
-    ok.
  
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-cluster_start_test()->
-    io:format("Start ~p~n",[?FUNCTION_NAME]),
-
-    HostClusterNameList=lists:sort(ops:cluster_names()),
-    StartAll= [ops:create_cluster_node(HostName,ClusterName)||{HostName,ClusterName}<-HostClusterNameList],
-   % io:format("HostClusterNameList ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,HostClusterNameList}]),
-    [{ok,{"c100","test_cluster",'test_cluster@c100',"test_cluster_cookie","test_cluster.dir"}}|_]=lists:sort(StartAll),
-    
-   
-  %  (cluster_nodes),
-   % PodNameDirList=erlang:get(pod_name_dir_list),
-       
-    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
-    ok.
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
-cluster_stop_test()->
-    io:format("Start ~p~n",[?FUNCTION_NAME]),
-
-    HostClusterNameList=lists:sort(ops:cluster_names()),
-    StopAll= [{ops:delete_cluster_node(HostName,ClusterName),HostName,ClusterName}||{HostName,ClusterName}<-HostClusterNameList],
-    [{ok,"c100","test_cluster"}|_]=lists:sort(StopAll),
     
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+
     ok.
