@@ -30,7 +30,8 @@ start()->
 
     ok=setup(),
 
-    ok=candidates(),
+    ok=host_candidates(),
+    ok=pods_candidates(),
  
        
 %    {ok,AllServicesList}=which_services(?ClusterName),
@@ -58,9 +59,121 @@ intent()->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-candidates()->
+host_candidates()->
      io:format("Start ~p~n",[?FUNCTION_NAME]),    
-  
+    Spec=deployment_data:read_spec(),
+    AllNames=deployment_data:all_names(Spec),
+    [
+     [{"this_host_not_same_pod",[{"c100",[{pod_info,"c100",'test_cluster_0@c100',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+					  {pod_info,"c100",'test_cluster_1@c100',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+					  {pod_info,"c100",'test_cluster_2@c100',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+					  {pod_info,"c100",'test_cluster_3@c100',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+					  {pod_info,"c100",'test_cluster_4@c100',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+					  {pod_info,"c100",'test_cluster_5@c100',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+					  {pod_info,"c100",'test_cluster_6@c100',"test_cluster_6","test_cluster.dir/test_cluster_6"}]}]},
+      {"any_same_host_same_pod",[{"c100",[{pod_info,"c100",'test_cluster_0@c100',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+					  {pod_info,"c100",'test_cluster_1@c100',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+					  {pod_info,"c100",'test_cluster_2@c100',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+					  {pod_info,"c100",'test_cluster_3@c100',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+					  {pod_info,"c100",'test_cluster_4@c100',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+					  {pod_info,"c100",'test_cluster_5@c100',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+					  {pod_info,"c100",'test_cluster_6@c100',"test_cluster_6","test_cluster.dir/test_cluster_6"}]},
+				 {"c200",[{pod_info,"c200",'test_cluster_0@c200',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+					  {pod_info,"c200",'test_cluster_1@c200',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+					  {pod_info,"c200",'test_cluster_2@c200',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+					  {pod_info,"c200",'test_cluster_3@c200',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+					  {pod_info,"c200",'test_cluster_4@c200',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+					  {pod_info,"c200",'test_cluster_5@c200',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+					  {pod_info,"c200",'test_cluster_6@c200',"test_cluster_6","test_cluster.dir/test_cluster_6"}]},
+				 {"c201",[{pod_info,"c201",'test_cluster_0@c201',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+					  {pod_info,"c201",'test_cluster_1@c201',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+					  {pod_info,"c201",'test_cluster_2@c201',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+					  {pod_info,"c201",'test_cluster_3@c201',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+					  {pod_info,"c201",'test_cluster_4@c201',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+					  {pod_info,"c201",'test_cluster_5@c201',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+					  {pod_info,"c201",'test_cluster_6@c201',"test_cluster_6","test_cluster.dir/test_cluster_6"}]}]},
+      {"any_same_host_not_same_pod",[{"c100",[{pod_info,"c100",'test_cluster_0@c100',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+					      {pod_info,"c100",'test_cluster_1@c100',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+					      {pod_info,"c100",'test_cluster_2@c100',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+					      {pod_info,"c100",'test_cluster_3@c100',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+					      {pod_info,"c100",'test_cluster_4@c100',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+					      {pod_info,"c100",'test_cluster_5@c100',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+					      {pod_info,"c100",'test_cluster_6@c100',"test_cluster_6","test_cluster.dir/test_cluster_6"}]},
+				     {"c200",[{pod_info,"c200",'test_cluster_0@c200',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+					      {pod_info,"c200",'test_cluster_1@c200',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+					      {pod_info,"c200",'test_cluster_2@c200',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+					      {pod_info,"c200",'test_cluster_3@c200',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+					      {pod_info,"c200",'test_cluster_4@c200',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+					      {pod_info,"c200",'test_cluster_5@c200',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+					      {pod_info,"c200",'test_cluster_6@c200',"test_cluster_6","test_cluster.dir/test_cluster_6"}]},
+				     {"c201",[{pod_info,"c201",'test_cluster_0@c201',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+					      {pod_info,"c201",'test_cluster_1@c201',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+					      {pod_info,"c201",'test_cluster_2@c201',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+					      {pod_info,"c201",'test_cluster_3@c201',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+					      {pod_info,"c201",'test_cluster_4@c201',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+					      {pod_info,"c201",'test_cluster_5@c201',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+					      {pod_info,"c201",'test_cluster_6@c201',"test_cluster_6","test_cluster.dir/test_cluster_6"}]}]},
+      {"any_not_same_hosts_not_same_pods",[[{"c201",[{pod_info,"c201",'test_cluster_0@c201',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+						     {pod_info,"c201",'test_cluster_1@c201',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+						     {pod_info,"c201",'test_cluster_2@c201',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+						     {pod_info,"c201",'test_cluster_3@c201',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+						     {pod_info,"c201",'test_cluster_4@c201',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+						     {pod_info,"c201",'test_cluster_5@c201',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+						     {pod_info,"c201",'test_cluster_6@c201',"test_cluster_6","test_cluster.dir/test_cluster_6"}]},
+					    {"c200",[{pod_info,"c200",'test_cluster_0@c200',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+						     {pod_info,"c200",'test_cluster_1@c200',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+						     {pod_info,"c200",'test_cluster_2@c200',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+						     {pod_info,"c200",'test_cluster_3@c200',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+						     {pod_info,"c200",'test_cluster_4@c200',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+						     {pod_info,"c200",'test_cluster_5@c200',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+						     {pod_info,"c200",'test_cluster_6@c200',"test_cluster_6","test_cluster.dir/test_cluster_6"}]}],
+					   [{"c201",[{pod_info,"c201",'test_cluster_0@c201',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+						     {pod_info,"c201",'test_cluster_1@c201',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+						     {pod_info,"c201",'test_cluster_2@c201',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+						     {pod_info,"c201",'test_cluster_3@c201',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+						     {pod_info,"c201",'test_cluster_4@c201',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+						     {pod_info,"c201",'test_cluster_5@c201',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+						     {pod_info,"c201",'test_cluster_6@c201',"test_cluster_6","test_cluster.dir/test_cluster_6"}]},
+					    {"c100",[{pod_info,"c100",'test_cluster_0@c100',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+						     {pod_info,"c100",'test_cluster_1@c100',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+						     {pod_info,"c100",'test_cluster_2@c100',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+						     {pod_info,"c100",'test_cluster_3@c100',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+						     {pod_info,"c100",'test_cluster_4@c100',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+						     {pod_info,"c100",'test_cluster_5@c100',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+						     {pod_info,"c100",'test_cluster_6@c100',"test_cluster_6","test_cluster.dir/test_cluster_6"}]}],
+					   [{"c200",[{pod_info,"c200",'test_cluster_0@c200',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+						     {pod_info,"c200",'test_cluster_1@c200',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+						     {pod_info,"c200",'test_cluster_2@c200',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+						     {pod_info,"c200",'test_cluster_3@c200',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+						     {pod_info,"c200",'test_cluster_4@c200',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+						     {pod_info,"c200",'test_cluster_5@c200',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+						     {pod_info,"c200",'test_cluster_6@c200',"test_cluster_6","test_cluster.dir/test_cluster_6"}]},
+					    {"c100",[{pod_info,"c100",'test_cluster_0@c100',"test_cluster_0","test_cluster.dir/test_cluster_0"},
+						     {pod_info,"c100",'test_cluster_1@c100',"test_cluster_1","test_cluster.dir/test_cluster_1"},
+						     {pod_info,"c100",'test_cluster_2@c100',"test_cluster_2","test_cluster.dir/test_cluster_2"},
+						     {pod_info,"c100",'test_cluster_3@c100',"test_cluster_3","test_cluster.dir/test_cluster_3"},
+						     {pod_info,"c100",'test_cluster_4@c100',"test_cluster_4","test_cluster.dir/test_cluster_4"},
+						     {pod_info,"c100",'test_cluster_5@c100',"test_cluster_5","test_cluster.dir/test_cluster_5"},
+						     {pod_info,"c100",'test_cluster_6@c100',"test_cluster_6","test_cluster.dir/test_cluster_6"}]}]]}]
+    ]=[{DeplName,candidates:hostnames(DeplName)}||DeplName<-AllNames],
+      
+
+    io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
+    ok.
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+pods_candidates()->
+     io:format("Start ~p~n",[?FUNCTION_NAME]),    
+    Spec=deployment_data:read_spec(),
+    AllNames=deployment_data:all_names(Spec),
+    [glurk
+    ]=[{DeplName,candidates:pods(DeplName)}||DeplName<-AllNames],
+      
+
     io:format("Stop OK !!! ~p~n",[?FUNCTION_NAME]),
     ok.
 

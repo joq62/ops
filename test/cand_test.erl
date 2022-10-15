@@ -55,7 +55,7 @@ pod_candidates()->
     NumInstances=deployment_data:item(num_instances,"any_not_same_hosts_not_same_pods",Spec),
     ServiceList=deployment_data:item(services,"any_not_same_hosts_not_same_pods",Spec),
     
-    gl=candidates:pods(NumInstances,?HostName,?ClusterName,ServiceList),
+    []=candidates:pods(NumInstances,?HostName,?ClusterName,ServiceList),
     
     
 

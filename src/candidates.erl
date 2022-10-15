@@ -16,7 +16,7 @@
 
 	 hostnames/1,
 	 hostnames/2,
-	 pods/4
+	 pods/1
 	]).
 %% --------------------------------------------------------------------
 %% Include files
@@ -30,7 +30,17 @@
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-pods(_NumInstances,HostName,ClusterName,ServiceList)->
+pods(DeploymentName)->
+    HostCandidates=hostnames(DeploymentName),
+    DeploymentSpec=deployment_data:read_spec(),
+    ClusterName=deployment_data:item(cluster_name,DeploymentName,DeploymentSpec),
+ %   NumInstances=deployment_data:item(num_instances,DeploymentName,DeploymentSpec),
+    ServiceList=deployment_data:item(services,DeploymentName,DeploymentSpec),
+    [pods(HostName,ClusterName,ServiceList)||HostName<-HostCandidates].
+
+pods(HostName,ClusterName,ServiceList)->
+% not_same_pod,same_pod
+
     ClusterSpec=cluster_data:read_spec(),
     AllNames=pod_data:all_names(HostName,ClusterName,ClusterSpec),
     io:format("AllNames ~p~n",[{?MODULE,?LINE,AllNames}]),
@@ -51,6 +61,8 @@ candidate(ServicesInfo,ServiceList)->
 
 candidate([],_ServiceList,Acc)->
     Acc;
+candidate([{{badrpc,nodedown},_Info}|T],ServiceList,Acc)->
+    candidate(T,ServiceList,Acc);
 candidate([{WhichApplications,Info}|T],ServiceList,Acc)->
     R=[Info||{Service,_,_}<-WhichApplications,
 	     lists:keymember(atom_to_list(Service),1,ServiceList)],
@@ -61,31 +73,41 @@ candidate([{WhichApplications,Info}|T],ServiceList,Acc)->
 		   Acc
 	   end,
     candidate(T,ServiceList,NewAcc).
+
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
+
 hostnames(DeploymentName)->
     DeploymentSpec=deployment_data:read_spec(),
-
     NumInstances=deployment_data:item(num_instances,DeploymentName,DeploymentSpec),
     HostNameList=deployment_data:item(hostnames,DeploymentName,DeploymentSpec),
-    _ClusterName=deployment_data:item(cluster_name,DeploymentName,DeploymentSpec),
+    ClusterName=deployment_data:item(cluster_name,DeploymentName,DeploymentSpec),
     HostConstraints=lists:sort(deployment_data:item(host_constraints,DeploymentName,DeploymentSpec)),
+    ServiceList=deployment_data:item(services,DeploymentName,DeploymentSpec),
 
     Result=case HostConstraints of
 	       [any_host,not_same_host] ->
-		   hostnames(NumInstances,HostNameList);
-	       [any_host,same_host]->
-		   HostNameList;
-	       [this_host] ->
-		   HostNameList
+		   HostCandidates=hostnames(NumInstances,HostNameList), %[[Host1,,HostN],[..]]
+		   pods1(HostCandidates,ClusterName,ServiceList);
+	       [any_host,same_host]->% [Host1,,HostN]
+		   [{HostName,pods(HostName,ClusterName,ServiceList)}||HostName<-HostNameList];
+	       [this_host] ->  % [HostThisHost1]
+		   [{HostName,pods(HostName,ClusterName,ServiceList)}||HostName<-HostNameList]
 	   end,
     Result.
 	      
-		   
-		   
+pods1(HostCandidates,ClusterName,ServiceList)->
+    pods1(HostCandidates,ClusterName,ServiceList,[]).
+
+pods1([],_ClusterName,_ServiceList,Acc)->
+    Acc;
+pods1([HostList|T],ClusterName,ServiceList,Acc)->
+    R=[{HostName,pods(HostName,ClusterName,ServiceList)}||HostName<-HostList],		   
+    pods1(T,ClusterName,ServiceList,[R|Acc]).
+      
 
 hostnames(NumInstances,HostNameList)->
 
