@@ -25,6 +25,7 @@
 	]).
 
 -export([
+	 get_controller_node/1,
 	 create_controller/1,
 	 delete_controller/1,
 	 controllers/0
@@ -110,6 +111,10 @@ delete_pod(HostName,PodNode)->
 pods()->
     gen_server:call(?MODULE,{pods},infinity).   
 
+
+%% --------------------------------------------------------------------
+
+
 create_controller(HostName)->
     gen_server:call(?MODULE,{create_controller,HostName},infinity).   
 
@@ -118,7 +123,8 @@ delete_controller(HostName)->
 
 controllers()->
     gen_server:call(?MODULE,{controllers},infinity).   
-
+get_controller_node(HostName)->
+    gen_server:call(?MODULE,{get_controller_node,HostName},infinity). 
 
 
 %% --------------------------------------------------------------------
@@ -302,6 +308,20 @@ handle_call({delete_pod,HostName,PodeNode},_From, State) ->
 handle_call({controllers},_From, State) ->
     Reply=State#state.controllers,
     {reply, Reply, State};
+
+
+handle_call({get_controller_node,HostName},_From, State) ->
+    Member=[ControllerInfoList||ControllerInfoList<-State#state.controllers,
+				true=:=lists:member({host_name,HostName},ControllerInfoList)],
+    Reply= case Member of
+	       []->
+  		   {error,[not_started,HostName]};
+	       [ControllerInfoList]->
+		   {node,ControllerNode}=lists:keyfind(node,1,ControllerInfoList),
+		   {ok,ControllerNode}
+	   end,
+    {reply, Reply, State};
+
 
 handle_call({create_controller,HostName},_From, State) ->
     

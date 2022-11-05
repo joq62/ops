@@ -46,9 +46,11 @@ create_tests()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
  
     []=ops:controllers(),
+    kuk=ops:get_controller_node("c100"),
     {error,[not_started,"c100"]}=ops:delete_controller("c100"),
     ok=ops:create_controller("c100"),
-   
+    kuk=ops:get_controller_node("c100"),
+
     {ok,"c100",PodNode1}=ops:create_pod("c100","test_app_1",[]),
     42=rpc:call(PodNode1,test_add,add,[20,22]),
     
