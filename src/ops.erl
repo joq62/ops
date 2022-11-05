@@ -19,7 +19,15 @@
 
 %% External exports
 -export([
-	 create_controller/1
+	 create_pod/3,
+	 delete_pod/2,
+	 pods/0
+	]).
+
+-export([
+	 create_controller/1,
+	 delete_controller/1,
+	 controllers/0
 	]).
 
 %% Cluster
@@ -75,7 +83,10 @@
 -define(ControllerApp,controller_app).
 
 
--record(state,{controller_app_env,
+-record(state,{
+	       pods,
+	       controllers,
+	       controller_app_env,
 	       spec_files,
 	       spec_dir,
 	       cluster_name,
@@ -90,8 +101,23 @@
 appl_start([])->
     application:start(?MODULE).
 %% --------------------------------------------------------------------
+create_pod(HostName,AppId,AppEnv)->
+    gen_server:call(?MODULE,{create_pod,HostName,AppId,AppEnv},infinity).   
+
+delete_pod(HostName,PodNode)->
+    gen_server:call(?MODULE,{delete_pod,HostName,PodNode},infinity). 
+
+pods()->
+    gen_server:call(?MODULE,{pods},infinity).   
+
 create_controller(HostName)->
     gen_server:call(?MODULE,{create_controller,HostName},infinity).   
+
+delete_controller(HostName)->
+    gen_server:call(?MODULE,{delete_controller,HostName},infinity). 
+
+controllers()->
+    gen_server:call(?MODULE,{controllers},infinity).   
 
 
 
@@ -188,7 +214,9 @@ init([]) ->
 				    {spec_dir,SpecDir}]}],
     
     
-    {ok, #state{controller_app_env=ControllerEnv,
+    {ok, #state{pods=[],
+	        controllers=[],
+		controller_app_env=ControllerEnv,
 		spec_files=[ApplicationSpec,ClusterSpec,DeploymentSpec,HostSpec],
 		spec_dir=SpecDir,
 		cluster_name=ClusterName,
@@ -207,14 +235,121 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
+handle_call({pods},_From, State) ->
+    Reply=State#state.pods,
+    {reply, Reply, State};
 
+handle_call({create_pod,HostName,AppId,AppEnv},_From, State) ->
+    Member=[ControllerInfoList||ControllerInfoList<-State#state.controllers,
+				true=:=lists:member({host_name,HostName},ControllerInfoList)],
+    Reply= case Member of
+	       []->
+		   NewState=State,
+		   {error,[not_started,HostName]};
+	       [ControllerInfoList]->
+		   {node,ControllerNode}=lists:keyfind(node,1,ControllerInfoList),
+		   {dir,ControllerDir}=lists:keyfind(dir,1,ControllerInfoList),
+		   ClusterName=State#state.cluster_name,
+		   Cookie=atom_to_list(erlang:get_cookie()),
+		   PodNodeName=ControllerDir++"_"++erlang:integer_to_list(os:system_time(microsecond),36),
+		   PodDirName=erlang:integer_to_list(os:system_time(microsecond),36)++".pod_dir",
+		   PodDir=filename:join(ClusterName,PodDirName),
+		   case  ops_pod:create(HostName,ControllerNode,PodNodeName,PodDir,Cookie,AppId,AppEnv) of
+		       {error,Reason}->
+			   NewState=State,
+			   {error,Reason};
+		       {ok,PodeNode,PodDir}->
+			   NewState=State#state{pods=[
+						      [{host_name,HostName},
+						       {node,PodeNode},
+						       {dir,PodDir},
+						       {time,{date(),time()}}
+						      ]|State#state.pods]},
+			   {ok,HostName,PodeNode}		  
+		   end
+	   end,
+    {reply, Reply, NewState};
+
+handle_call({delete_pod,HostName,PodeNode},_From, State) ->
+    Member=[ControllerInfoList||ControllerInfoList<-State#state.controllers,
+				true=:=lists:member({host_name,HostName},ControllerInfoList)],
+    Reply= case Member of
+	       []->
+		   NewState=State,
+		   {error,[not_started,HostName]};
+	       [ControllerInfoList]->
+		   {node,ControllerNode}=lists:keyfind(node,1,ControllerInfoList),
+		   MemberPod=[PodInfoList||PodInfoList<-State#state.pods,
+					true=:=lists:member({node,PodeNode},PodInfoList)],
+		  case MemberPod of
+		      []->
+			  NewState=State,
+			  {error,[not_started,HostName,PodeNode]};
+		      [PodInfoList]->
+			  {dir,PodDir}=lists:keyfind(dir,1,PodInfoList),
+			  NewPodList=[X||X<-State#state.pods,
+					 false=:=lists:member({node,PodeNode},X)],
+			  NewState=State#state{pods=NewPodList},
+			  ops_pod:delete(ControllerNode,PodeNode,PodDir)
+		  end
+	   end,
+    {reply, Reply, NewState};
+   
+
+  
+%% --------------------------------------------------------------------
+
+handle_call({controllers},_From, State) ->
+    Reply=State#state.controllers,
+    {reply, Reply, State};
 
 handle_call({create_controller,HostName},_From, State) ->
-    Reply=ops_controller:create(HostName,
-				State#state.cluster_name,
-				State#state.cluster_spec,
-				State#state.controller_app_env),
-    {reply, Reply, State};
+    
+    %[{host_name,HostName},{node,Node},{dir,Dir},{time,{Date,Time}}]
+    Member=[ControllerInfoList||ControllerInfoList<-State#state.controllers,
+				true=:=lists:member({host_name,HostName},ControllerInfoList)],
+    Reply= case Member of
+		[]->
+		    case ops_controller:create(HostName,
+					       State#state.cluster_name,
+					       State#state.cluster_spec,
+					       State#state.controller_app_env) of
+			{error,Reason}->
+			    NewState=State,
+			    {error,Reason};
+			{ok,Node,Dir}->
+			    NewState=State#state{controllers=[
+							      [{host_name,HostName},
+							       {node,Node},
+							       {dir,Dir},
+							       {time,{date(),time()}}
+							      ]|State#state.controllers]},
+			    ok
+		    end;
+	       _->
+		   NewState=State,
+		   {error,[already_started,HostName]}
+	   end,
+    {reply, Reply, NewState};
+
+handle_call({delete_controller,HostName},_From, State) ->
+    
+    Member=[ControllerInfoList||ControllerInfoList<-State#state.controllers,
+				true=:=lists:member({host_name,HostName},ControllerInfoList)],
+    Reply= case Member of
+	       []->
+		   NewState=State,
+		   {error,[not_started,HostName]};
+	       [ControllerInfoList]->
+		   {node,Node}=lists:keyfind(node,1,ControllerInfoList),
+		   {dir,Dir}=lists:keyfind(dir,1,ControllerInfoList),
+		   NewControllerList=[X||X<-State#state.controllers,
+					 false=:=lists:member({host_name,HostName},X)],
+		   NewState=State#state{controllers=NewControllerList},
+		   ops_controller:delete(Node,Dir)
+	   end,
+    {reply, Reply, NewState};
+   
 
   
 %% --------------------------------------------------------------------

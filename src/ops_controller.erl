@@ -12,14 +12,22 @@
 -module(ops_controller).   
  
 -export([
-	 create/4
+	 create/4,
+	 delete/2
 	]).
 		 
 
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
-
+delete(ControllerNode,Dir)->
+    rpc:call(ControllerNode,os,cmd,["rm -rf "++Dir]),
+    rpc:call(ControllerNode,init,kill,[],2000),
+    ok.
+    
+    
+    
+    
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
@@ -72,12 +80,12 @@ create(HostName,ClusterName,ClusterSpec,ControllerEnv)->
 							       {error,Reason}->
 								   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
 							       ok->
-									   case appl:start(Node,App) of
-									       {error,Reason}->
-										   {error,Reason};
-									       ok->
-										   ok
-									   end
+								   case appl:start(Node,App) of
+								       {error,Reason}->
+									   {error,Reason};
+								       ok->
+									   {ok,Node,Dir}
+								   end
 							   end
 						   end
 					   end
