@@ -97,6 +97,7 @@ hostnames(DeploymentName)->
 	       [this_host] ->  % [HostThisHost1]
 		   [{HostName,pods(HostName,ClusterName,ServiceList)}||HostName<-HostNameList]
 	   end,
+    
     Result.
 	      
 pods1(HostCandidates,ClusterName,ServiceList)->

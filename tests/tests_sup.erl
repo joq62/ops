@@ -3,7 +3,7 @@
 %% @end
 %%%-------------------------------------------------------------------
 
--module(ops_sup).
+-module(tests_sup).
 
 -behaviour(supervisor).
 
@@ -29,15 +29,7 @@ init([]) ->
     SupFlags = #{strategy => one_for_all,
                  intensity => 0,
                  period => 1},
-    ChildSpecs = [#{id=>config,
-		    start=>{config,start,[]}},
-		  #{id=>common,
-		    start=>{common,start,[]}},
-		  #{id=>sd,
-		    start=>{sd,start,[]}},
-		 #{id=>nodelog,
-		    start=>{nodelog,start,[]}},
-		 #{id=>ops,
+    ChildSpecs = [#{id=>ops,
 		    start=>{ops,start,[]}}],
     {ok, {SupFlags, ChildSpecs}}.
 

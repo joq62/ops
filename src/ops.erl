@@ -18,7 +18,9 @@
 %% --------------------------------------------------------------------
 
 %% External exports
-
+-export([
+	 create_controller/1
+	]).
 
 %% Cluster
 -export([
@@ -69,10 +71,16 @@
 -export([init/1, handle_call/3,handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 %%-------------------------------------------------------------------
--record(state,{
-	       cluster_spec,
-	       deployment_spec
-	       }).
+
+-define(ControllerApp,controller_app).
+
+
+-record(state,{controller_app_env,
+	       spec_files,
+	       spec_dir,
+	       cluster_name,
+	       cluster_spec
+	      }).
 
 
 %% ====================================================================
@@ -81,6 +89,12 @@
 
 appl_start([])->
     application:start(?MODULE).
+%% --------------------------------------------------------------------
+create_controller(HostName)->
+    gen_server:call(?MODULE,{create_controller,HostName},infinity).   
+
+
+
 %% --------------------------------------------------------------------
 create_cluster_node(HostName,ClusterName)->
     gen_server:call(?MODULE,{create_cluster_node,HostName,ClusterName},infinity).   
@@ -159,12 +173,28 @@ ping()->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([]) ->
+    AllEnvs=application:get_all_env(),
+    {cluster_name,ClusterName}=lists:keyfind(cluster_name,1,AllEnvs),
+    {application_spec,ApplicationSpec}=lists:keyfind(application_spec,1,AllEnvs),
+    {cluster_spec,ClusterSpec}=lists:keyfind(cluster_spec,1,AllEnvs),
+    {deployment_spec,DeploymentSpec}=lists:keyfind(deployment_spec,1,AllEnvs),
+    {host_spec,HostSpec}=lists:keyfind(host_spec,1,AllEnvs),
+    {spec_dir,SpecDir}=lists:keyfind(spec_dir,1,AllEnvs),
     
-    ok=application:start(config),
-    ClusterSpec=cluster_data:read_spec(),
-      
-    {ok, #state{cluster_spec=ClusterSpec,
-		deployment_spec=[]}}.   
+    ControllerEnv=[{?ControllerApp,[{deployment_spec,DeploymentSpec},
+				    {cluster_spec,ClusterSpec},
+				    {host_spec,HostSpec},
+				    {application_spec,ApplicationSpec},
+				    {spec_dir,SpecDir}]}],
+    
+    
+    {ok, #state{controller_app_env=ControllerEnv,
+		spec_files=[ApplicationSpec,ClusterSpec,DeploymentSpec,HostSpec],
+		spec_dir=SpecDir,
+		cluster_name=ClusterName,
+		cluster_spec=ClusterSpec
+	       }
+    }.   
  
 
 %% --------------------------------------------------------------------
@@ -176,6 +206,17 @@ init([]) ->
 %%          {noreply, State, Timeout}      |
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
+%% --------------------------------------------------------------------
+
+
+handle_call({create_controller,HostName},_From, State) ->
+    Reply=ops_controller:create(HostName,
+				State#state.cluster_name,
+				State#state.cluster_spec,
+				State#state.controller_app_env),
+    {reply, Reply, State};
+
+  
 %% --------------------------------------------------------------------
 
 handle_call({git_load_service,HostName,ClusterName,PodName,Service},_From, State) ->
@@ -245,7 +286,8 @@ handle_call({cluster_spec},_From, State) ->
     {reply, Reply, State};
 
 handle_call({deployment_spec},_From, State) ->
-    Reply=cluster_data:deployment_all_names(State#state.deployment_spec),
+ %   Reply=cluster_data:deployment_all_names(State#state.deployment_spec),
+    Reply='not implmented',
     {reply, Reply, State};
 
  

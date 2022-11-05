@@ -9,17 +9,9 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(scheduler_lib).   
+-module(start_stop_pod).   
  
--export([
-	 intent_cluster/2,
-	 cluster_status/2,
-	 intent_pod/2,
-	 pod_status/2
-	 	 
-	]).
-		 
-
+-export([start/0]).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
@@ -28,42 +20,63 @@
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% -------------------------------------------------------------------
-intent_cluster(ClusterName,ClusterSpec)->
-    R=[{HostName,CN}||{HostName,CN}<-cluster_data:all_names(),
-		      CN=:=ClusterName],
-    io:format("ClusterName ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,R}]),
-    Status=[{ops:is_cluster_node_present(HostName,ClusterName)}||{HostName,ClusterName}<-R],
-    Present=[{HostName,ClusterName}||{true,HostName,ClusterName}<-Status],
-    NotPresent=[{HostName,ClusterName}||{false,HostName,ClusterName}<-Status],
-    {{present,Present},{not_present,NotPresent}}.
+%% --------------------------------------------------------------------
+start()->
+    application:start(ops),
+    ok=create_vms(),
+    
+   % init:stop(),
+    ok.
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% -------------------------------------------------------------------
-cluster_status(ClusterName,ClusterSpec)->
-    {error,[not_implemeted,?FUNCTION_NAME,ClusterName]}.
 %% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% -------------------------------------------------------------------
-intent_pod(ClusterName,ClusterSpec)->
-   
-    not_implemted.
+-define(NodeInfo,[{"n1","n1","c201"},
+		  {"n2","n2","c201"},
+		  {"n3","n3","c201"}]).
+
+
+create_vms()->
+    
+    ok=start_vm(?NodeInfo),
+    
+
+    
+    ok.
+start_vm([])->
+    ok;
+start_vm([{NodeName,Cookie,HostName}|T])->
+
+    Node=list_to_atom(NodeName++"@"++HostName),
+    rpc:call(Node,init,stop,[]),
+    timer:sleep(1000),
+    io:format(" ~p~n",[Node]),
+    true=erlang:set_cookie(node(),list_to_atom(Cookie)),
+    ops:cmd(HostName,os,cmd,["erl -sname "++NodeName++" "++" -setcookie "++Cookie++" "++" -detached"],5000),
+    timer:sleep(3000),
+    pong=net_adm:ping(Node),
+    rpc:call(Node,init,stop,[]),
+    start_vm(T).
+    
+    
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% -------------------------------------------------------------------
-pod_status(ClusterName,ClusterSpec)->
-    {error,[not_implemeted,?FUNCTION_NAME,ClusterName]}.
+%% --------------------------------------------------------------------
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% -------------------------------------------------------------------
+%% --------------------------------------------------------------------
+
+
+setup()->
+  
+    
+    R=ok,
+    R.
