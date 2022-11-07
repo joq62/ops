@@ -9,12 +9,14 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(all).      
+-module(connect_tests).      
  
 -export([start/0]).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+-define(ClusterName,"test_cluster").
+
 
 
 %% --------------------------------------------------------------------
@@ -26,11 +28,63 @@ start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
 
     ok=setup(),
-    ok=connect_tests:start(),
+    ok=create_tests(),
 
     io:format("Stop OK !!! ~p~n",[{?MODULE,?FUNCTION_NAME}]),
-  %  timer:sleep(2000),
- %   init:stop(),
+ 
+    ok.
+
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+create_tests()->
+    []=ops:connect_nodes(),
+
+    {error,[not_started_on_host,"c100"]}=ops:delete_connect_node("c100"),
+    {ok,'test_cluster_connect@c100',
+     [{pong,'test_cluster_connect@c100'},
+      {pang,'test_cluster_connect@c200'}]}=ops:create_connect_node("c100"),
+
+    [
+     {"c100",
+      Conn1,
+      {_,_}}
+    ]=ops:connect_nodes(),
+    pong=net_adm:ping(Conn1),
+    {error,[already_started_on_host,"c100"]}=ops:create_connect_node("c100"),
+
+
+    {ok,
+     'test_cluster_connect@c200',
+     [{pong,'test_cluster_connect@c100'},
+      {pong,'test_cluster_connect@c200'}]}=ops:create_connect_node("c200"),
+   
+    [
+     {"c100",
+      Conn1,
+      {_,_}},
+     {"c200",
+      Conn2,
+      {_,_}}
+    ]=lists:sort(ops:connect_nodes()),
+
+    pong=net_adm:ping(Conn2),
+    
+    ok=ops:delete_connect_node("c100"),
+
+    [
+     {"c200",
+      Conn2,
+      {_,_}}
+    ]=lists:sort(ops:connect_nodes()),
+    
+    ok=ops:delete_connect_node("c200"),
+    
+    []=lists:sort(ops:connect_nodes()),
+   
     ok.
 
 
@@ -40,47 +94,14 @@ start()->
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
 
-
-
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-
-%% --------------------------------------------------------------------
-%% Function: available_hosts()
-%% Description: Based on hosts.config file checks which hosts are avaible
-%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
-%% --------------------------------------------------------------------
--define(ClusterName,"test_cluster").
--define(Cookie,"test_cluster_cookie").
--define(DepFile,"spec.deployment").
--define(ClusterFile,"spec.cluster").
--define(HostFile,"spec.host").
--define(ApplicationFile,"spec.application").
--define(NodesToConnect,['test_cluster_connect@c100','test_cluster_connect@c200']).
 
 setup()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
-    
-    erlang:set_cookie(node(),list_to_atom(?Cookie)),
-        
-    _R=[rpc:call(N,init,stop,[],2000)||N<-?NodesToConnect],
-    timer:sleep(2000),
-
-    AppEnv=[{ops,[{cluster_name,?ClusterName},
-		  {deployment_spec,?DepFile},
-		  {cluster_spec,?ClusterFile},
-		  {host_spec,?HostFile},
-		  {application_spec,?ApplicationFile},
-		  {spec_dir,"."},
-		  {nodes_to_connect,?NodesToConnect}]}],
-
-
-    ok=application:set_env(AppEnv),
-    ok=application:start(ops),
-    pong=config:ping(),
    
     io:format("Stop OK !!! ~p~n",[{?MODULE,?FUNCTION_NAME}]),
 

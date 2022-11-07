@@ -19,6 +19,12 @@
 
 %% External exports
 -export([
+	 connect_nodes/0,
+	 create_connect_node/1,
+	 delete_connect_node/1
+	]).
+
+-export([
 	 create_pod/3,
 	 delete_pod/2,
 	 pods/0
@@ -87,11 +93,13 @@
 -record(state,{
 	       pods,
 	       controllers,
+	       connect_nodes,
 	       controller_app_env,
 	       spec_files,
 	       spec_dir,
 	       cluster_name,
-	       cluster_spec
+	       cluster_spec,
+	       nodes_to_connect
 	      }).
 
 
@@ -101,6 +109,16 @@
 
 appl_start([])->
     application:start(?MODULE).
+%% --------------------------------------------------------------------
+connect_nodes()->
+    gen_server:call(?MODULE,{connect_nodes},infinity).   
+
+create_connect_node(HostName)->
+    gen_server:call(?MODULE,{create_connect_node,HostName},infinity).   
+
+delete_connect_node(HostName)->
+    gen_server:call(?MODULE,{delete_connect_node,HostName},infinity). 
+
 %% --------------------------------------------------------------------
 create_pod(HostName,AppId,AppEnv)->
     gen_server:call(?MODULE,{create_pod,HostName,AppId,AppEnv},infinity).   
@@ -212,21 +230,24 @@ init([]) ->
     {deployment_spec,DeploymentSpec}=lists:keyfind(deployment_spec,1,AllEnvs),
     {host_spec,HostSpec}=lists:keyfind(host_spec,1,AllEnvs),
     {spec_dir,SpecDir}=lists:keyfind(spec_dir,1,AllEnvs),
+    {nodes_to_connect,NodesToConnect}=lists:keyfind(nodes_to_connect,1,AllEnvs),
     
     ControllerEnv=[{?ControllerApp,[{deployment_spec,DeploymentSpec},
 				    {cluster_spec,ClusterSpec},
 				    {host_spec,HostSpec},
 				    {application_spec,ApplicationSpec},
-				    {spec_dir,SpecDir}]}],
-    
-    
+				    {spec_dir,SpecDir},
+				    {nodes_to_connect,NodesToConnect}]}],
+        
     {ok, #state{pods=[],
 	        controllers=[],
+		connect_nodes=[],
 		controller_app_env=ControllerEnv,
 		spec_files=[ApplicationSpec,ClusterSpec,DeploymentSpec,HostSpec],
 		spec_dir=SpecDir,
 		cluster_name=ClusterName,
-		cluster_spec=ClusterSpec
+		cluster_spec=ClusterSpec,
+		nodes_to_connect=NodesToConnect
 	       }
     }.   
  
@@ -241,6 +262,56 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
+handle_call({connect_nodes},_From, State) ->
+    Reply=State#state.connect_nodes,
+    {reply, Reply, State};
+
+handle_call({create_connect_node,HostName},_From, State) ->
+    Reply=case lists:keymember(HostName,1,State#state.connect_nodes) of
+	      true->
+		  NewState=State,
+		  {error,[already_started_on_host,HostName]};
+	      false->
+		  NodeName=State#state.cluster_name++"_"++"connect",
+		  PaArgs=" ",
+		  EnvArgs=" -detached ",
+		  Cookie=atom_to_list(erlang:get_cookie()),
+		  case ops_connect:create(HostName,
+					  NodeName,
+					  Cookie,
+					  PaArgs,
+					  EnvArgs,
+					  State#state.nodes_to_connect) of
+		      {error,Reason}->
+			  NewState=State,
+			  {error,Reason};
+		      {ok,Node,PingResult}->
+			  NewState=State#state{connect_nodes=[{HostName,Node,{date(),time()}}|State#state.connect_nodes]},
+			  {ok,Node,PingResult}
+		  end
+	  end,
+    
+    {reply, Reply, NewState};
+handle_call({delete_connect_node,HostName},_From, State) ->
+    Reply=case lists:keyfind(HostName,1,State#state.connect_nodes) of
+	      false->
+		  NewState=State,
+		  {error,[not_started_on_host,HostName]};
+	      {HostName,Node,{_Date,_Time}}->
+		  case  ops_connect:delete(Node)  of
+		      {error,Reason}->
+			  NewState=State,
+			  {error,Reason};
+		      ok->
+			  NewState=State#state{connect_nodes=lists:keydelete(HostName,1,State#state.connect_nodes)},
+			 ok
+		  end
+	  end,
+	      
+    {reply, Reply, NewState};
+
+
+
 handle_call({pods},_From, State) ->
     Reply=State#state.pods,
     {reply, Reply, State};
