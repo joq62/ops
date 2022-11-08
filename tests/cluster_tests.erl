@@ -9,7 +9,7 @@
 %%% Pod consits beams from all services, app and app and sup erl.
 %%% The setup of envs is
 %%% -------------------------------------------------------------------
--module(connect_tests).      
+-module(cluster_tests).      
  
 -export([start/0]).
 %% --------------------------------------------------------------------
@@ -28,7 +28,8 @@ start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
 
     ok=setup(),
-    ok=create_tests(),
+    ok=connect_tests(),
+    ok=controller_tests(),
 
     io:format("Stop OK !!! ~p~n",[{?MODULE,?FUNCTION_NAME}]),
  
@@ -40,55 +41,51 @@ start()->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-create_tests()->
-    []=ops:connect_nodes(),
+controller_tests()->
 
-    {error,[connect_node_not_started_on_host,"c100"]}=ops:delete_connect_node("c100"),
-    {ok,'test_cluster_connect@c100',
-     [{pong,'test_cluster_connect@c100'},
-      {pang,'test_cluster_connect@c200'}]}=ops:create_connect_node("c100"),
-
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),  
+    %{ok,"c100",PodNodeC100}=ops:create_controller("c100"),
+  
+    ControllerStart=[ops:create_controller(HostName)||{HostName,_,_,_}<-ops:connect_nodes()],
+    [{ok,"c100",ControllerC100},
+     {ok,"c200",ControllerC200},
+     {ok,"c201",ControllerC201}
+    ]=lists:sort(ControllerStart),
+    
     [
-     {"c100",
-      Conn1,
-      "test_cluster",
-      {_,_}}
-    ]=ops:connect_nodes(),
-    pong=net_adm:ping(Conn1),
-    {error,[connect_node_already_started_on_host,"c100"]}=ops:create_connect_node("c100"),
-
-
-    {ok,
-     'test_cluster_connect@c200',
-     [{pong,'test_cluster_connect@c100'},
-      {pong,'test_cluster_connect@c200'}]}=ops:create_connect_node("c200"),
-   
-    [
-     {"c100",
-      Conn1,
-      "test_cluster",
-      {_,_}},
-     {"c200",
-      Conn2,
-      "test_cluster",
-      {_,_}}
+     {"c100",ConnectC100,"test_cluster",{_,_}},
+     {"c200",ConnectC200,"test_cluster",{_,_}},
+     {"c201",ConnectC201,"test_cluster",{_,_}}
     ]=lists:sort(ops:connect_nodes()),
 
-    pong=net_adm:ping(Conn2),
-    
-    ok=ops:delete_connect_node("c100"),
+    [ControllerC201,ControllerC200,ControllerC100,
+     ConnectC100,ConnectC200,ConnectC201
+    ]=lists:sort([ControllerC100|rpc:call(ControllerC100,erlang,nodes,[],2000)]),
+    [_,_,_]=rpc:call(ControllerC201,sd,get_node,[controller_app],1000),
+    io:format("Stop OK !!! ~p~n",[{?MODULE,?FUNCTION_NAME}]),
+    ok.
 
+
+%% --------------------------------------------------------------------
+%% Function: available_hosts()
+%% Description: Based on hosts.config file checks which hosts are avaible
+%% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
+%% --------------------------------------------------------------------
+connect_tests()->
+
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),  
+    DeleteConnect1=[ops:delete_connect_node(HostName)||HostName<-config:cluster_hostnames(?ClusterName)],
+    
+    %io:format("DeleteConnect1 ~p~n",[{DeleteConnect1,?MODULE,?FUNCTION_NAME,?LINE}]),
+    StartConnect=[ops:create_connect_node(HostName)||HostName<-config:cluster_hostnames(?ClusterName)],
+%    io:format("StartConnect ~p~n",[{StartConnect,?MODULE,?FUNCTION_NAME,?LINE}]),
     [
-     {"c200",
-      Conn2,
-      "test_cluster",
-      {_,_}}
+     {"c100",ConnectC100,"test_cluster",{_,_}},
+     {"c200",ConnectC200,"test_cluster",{_,_}},
+     {"c201",ConnectC201,"test_cluster",{_,_}}
     ]=lists:sort(ops:connect_nodes()),
-    
-    ok=ops:delete_connect_node("c200"),
-    
-    []=lists:sort(ops:connect_nodes()),
-   
+    [ConnectC100,ConnectC200,ConnectC201]=[ConnectC100|rpc:call(ConnectC100,erlang,nodes,[],2000)],
+    io:format("Stop OK !!! ~p~n",[{?MODULE,?FUNCTION_NAME}]),
     ok.
 
 
@@ -106,6 +103,10 @@ create_tests()->
 
 setup()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
+    
+    pong=ops:ping(),
+    pong=config:ping(),
+    []=ops:connect_nodes(),
    
     io:format("Stop OK !!! ~p~n",[{?MODULE,?FUNCTION_NAME}]),
 

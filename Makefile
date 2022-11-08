@@ -40,7 +40,7 @@ eunit:
 #	tests 
 	mkdir tests_ebin;
 	erlc -I include -o tests_ebin tests/*.erl;
-	cp tests/specs/spec.* .;
+	cp ../config/tests/specs/spec.* .;
 #  	dependencies
 	erlc -I include -o tests_ebin ../common/src/*.erl;
 	erlc -I include -o tests_ebin ../config/src/*.erl;

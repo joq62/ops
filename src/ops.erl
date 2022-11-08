@@ -230,8 +230,7 @@ init([]) ->
     {deployment_spec,DeploymentSpec}=lists:keyfind(deployment_spec,1,AllEnvs),
     {host_spec,HostSpec}=lists:keyfind(host_spec,1,AllEnvs),
     {spec_dir,SpecDir}=lists:keyfind(spec_dir,1,AllEnvs),
-    {nodes_to_connect,NodesToConnect}=lists:keyfind(nodes_to_connect,1,AllEnvs),
-    
+    NodesToConnect=config:cluster_connect_nodes(ClusterName),
     ControllerEnv=[{?ControllerApp,[{deployment_spec,DeploymentSpec},
 				    {cluster_spec,ClusterSpec},
 				    {host_spec,HostSpec},
@@ -270,14 +269,16 @@ handle_call({create_connect_node,HostName},_From, State) ->
     Reply=case lists:keymember(HostName,1,State#state.connect_nodes) of
 	      true->
 		  NewState=State,
-		  {error,[already_started_on_host,HostName]};
+		  {error,[connect_node_already_started_on_host,HostName]};
 	      false->
 		  NodeName=State#state.cluster_name++"_"++"connect",
 		  PaArgs=" ",
 		  EnvArgs=" -detached ",
 		  Cookie=atom_to_list(erlang:get_cookie()),
+		  NodeDir=State#state.cluster_name,
 		  case ops_connect:create(HostName,
 					  NodeName,
+					  NodeDir,
 					  Cookie,
 					  PaArgs,
 					  EnvArgs,
@@ -285,20 +286,20 @@ handle_call({create_connect_node,HostName},_From, State) ->
 		      {error,Reason}->
 			  NewState=State,
 			  {error,Reason};
-		      {ok,Node,PingResult}->
-			  NewState=State#state{connect_nodes=[{HostName,Node,{date(),time()}}|State#state.connect_nodes]},
+		      {ok,Node,NodeDir,PingResult}->
+			  NewState=State#state{connect_nodes=[{HostName,Node,NodeDir,{date(),time()}}|State#state.connect_nodes]},
 			  {ok,Node,PingResult}
 		  end
 	  end,
-    
     {reply, Reply, NewState};
+
 handle_call({delete_connect_node,HostName},_From, State) ->
     Reply=case lists:keyfind(HostName,1,State#state.connect_nodes) of
 	      false->
 		  NewState=State,
-		  {error,[not_started_on_host,HostName]};
-	      {HostName,Node,{_Date,_Time}}->
-		  case  ops_connect:delete(Node)  of
+		  {error,[connect_node_not_started_on_host,HostName]};
+	      {HostName,Node,NodeDir,{_Date,_Time}}->
+		  case  ops_connect:delete(HostName,Node,NodeDir)  of
 		      {error,Reason}->
 			  NewState=State,
 			  {error,Reason};
@@ -310,64 +311,55 @@ handle_call({delete_connect_node,HostName},_From, State) ->
 	      
     {reply, Reply, NewState};
 
-
-
 handle_call({pods},_From, State) ->
     Reply=State#state.pods,
     {reply, Reply, State};
 
 handle_call({create_pod,HostName,AppId,AppEnv},_From, State) ->
-    Member=[ControllerInfoList||ControllerInfoList<-State#state.controllers,
-				true=:=lists:member({host_name,HostName},ControllerInfoList)],
-    Reply= case Member of
-	       []->
-		   NewState=State,
-		   {error,[not_started,HostName]};
-	       [ControllerInfoList]->
-		   {node,ControllerNode}=lists:keyfind(node,1,ControllerInfoList),
-		   {dir,ControllerDir}=lists:keyfind(dir,1,ControllerInfoList),
-		   ClusterName=State#state.cluster_name,
-		   Cookie=atom_to_list(erlang:get_cookie()),
-		   PodNodeName=ControllerDir++"_"++erlang:integer_to_list(os:system_time(microsecond),36),
-		   PodDirName=erlang:integer_to_list(os:system_time(microsecond),36)++".pod_dir",
-		   PodDir=filename:join(ClusterName,PodDirName),
-		   case  ops_pod:create(HostName,ControllerNode,PodNodeName,PodDir,Cookie,AppId,AppEnv) of
-		       {error,Reason}->
-			   NewState=State,
-			   {error,Reason};
-		       {ok,PodeNode,PodDir}->
-			   NewState=State#state{pods=[
-						      [{host_name,HostName},
-						       {node,PodeNode},
-						       {dir,PodDir},
-						       {time,{date(),time()}}
-						      ]|State#state.pods]},
-			   {ok,HostName,PodeNode}		  
-		   end
-	   end,
+    Reply=case lists:keyfind(HostName,1,State#state.connect_nodes) of
+	      false->
+		  NewState=State,
+		  {error,[connect_node_not_started_on_host,HostName]};
+	      {HostName,ConnectNode,ClusterDir,{_Date,_Time}}->
+		  Cookie=atom_to_list(erlang:get_cookie()),
+		  Unique=erlang:integer_to_list(os:system_time(microsecond),36),
+		  PodNodeName=ClusterDir++"_"++Unique,
+		  PodDirName=Unique++".pod_dir",
+		  PodDir=filename:join(ClusterDir,PodDirName),
+		  case ops_pod:create(HostName,ConnectNode,PodNodeName,PodDir,Cookie,AppId,AppEnv) of
+		      {error,Reason}->
+			  NewState=State,
+			  {error,Reason};
+		      {ok,PodeNode,PodDir}->
+			  NewState=State#state{pods=[
+						     [{host_name,HostName},
+						      {node,PodeNode},
+						      {dir,PodDir},
+						      {time,{date(),time()}}
+						     ]|State#state.pods]},
+			  {ok,HostName,PodeNode}		  
+		  end
+	  end,
     {reply, Reply, NewState};
 
 handle_call({delete_pod,HostName,PodeNode},_From, State) ->
-    Member=[ControllerInfoList||ControllerInfoList<-State#state.controllers,
-				true=:=lists:member({host_name,HostName},ControllerInfoList)],
-    Reply= case Member of
-	       []->
-		   NewState=State,
-		   {error,[not_started,HostName]};
-	       [ControllerInfoList]->
-		   {node,ControllerNode}=lists:keyfind(node,1,ControllerInfoList),
-		   MemberPod=[PodInfoList||PodInfoList<-State#state.pods,
-					true=:=lists:member({node,PodeNode},PodInfoList)],
+    Reply=case lists:keyfind(HostName,1,State#state.connect_nodes) of
+	      false->
+		  NewState=State,
+		  {error,[connect_node_not_started_on_host,HostName]};
+	      {HostName,ConnectNode,_ClusterDir,{_Date,_Time}}->
+		  MemberPod=[PodInfoList||PodInfoList<-State#state.pods,
+					  true=:=lists:member({node,PodeNode},PodInfoList)],
 		  case MemberPod of
 		      []->
 			  NewState=State,
-			  {error,[not_started,HostName,PodeNode]};
+			  {error,[pod_not_started,HostName,PodeNode]};
 		      [PodInfoList]->
 			  {dir,PodDir}=lists:keyfind(dir,1,PodInfoList),
 			  NewPodList=[X||X<-State#state.pods,
 					 false=:=lists:member({node,PodeNode},X)],
 			  NewState=State#state{pods=NewPodList},
-			  ops_pod:delete(ControllerNode,PodeNode,PodDir)
+			  ops_pod:delete(ConnectNode,PodeNode,PodDir)
 		  end
 	   end,
     {reply, Reply, NewState};
@@ -395,33 +387,37 @@ handle_call({get_controller_node,HostName},_From, State) ->
 
 
 handle_call({create_controller,HostName},_From, State) ->
-    
     %[{host_name,HostName},{node,Node},{dir,Dir},{time,{Date,Time}}]
-    Member=[ControllerInfoList||ControllerInfoList<-State#state.controllers,
-				true=:=lists:member({host_name,HostName},ControllerInfoList)],
-    Reply= case Member of
-		[]->
-		    case ops_controller:create(HostName,
-					       State#state.cluster_name,
-					       State#state.cluster_spec,
-					       State#state.controller_app_env) of
-			{error,Reason}->
-			    NewState=State,
-			    {error,Reason};
-			{ok,Node,Dir}->
-			    NewState=State#state{controllers=[
-							      [{host_name,HostName},
-							       {node,Node},
-							       {dir,Dir},
-							       {time,{date(),time()}}
-							      ]|State#state.controllers]},
-			    ok
-		    end;
-	       _->
-		   NewState=State,
-		   {error,[already_started,HostName]}
-	   end,
+    Reply=case lists:keyfind(HostName,1,State#state.connect_nodes) of
+	      false->
+		  NewState=State,
+		  {error,[connect_node_not_started_on_host,HostName]};
+	      {HostName,ConnectNode,ClusterDir,{_Date,_Time}}->
+		  AppId="controller_app",
+		  AppEnv=State#state.controller_app_env,
+		  Cookie=atom_to_list(erlang:get_cookie()),
+		  Unique=erlang:integer_to_list(os:system_time(microsecond),36),
+		  PodNodeName=ClusterDir++"_"++Unique,
+		  PodDirName=Unique++".pod_dir",
+		  PodDir=filename:join(ClusterDir,PodDirName),
+		  case ops_pod:create(HostName,ConnectNode,PodNodeName,PodDir,Cookie,AppId,AppEnv) of
+		      {error,Reason}->
+			  NewState=State,
+			  {error,Reason};
+		      {ok,PodeNode,PodDir}->
+			  NewState=State#state{pods=[
+						     [{host_name,HostName},
+						      {node,PodeNode},
+						      {dir,PodDir},
+						      {time,{date(),time()}}
+						     ]|State#state.pods]},
+			  {ok,HostName,PodeNode}		  
+		  end
+	  end,
     {reply, Reply, NewState};
+
+
+
 
 handle_call({delete_controller,HostName},_From, State) ->
     

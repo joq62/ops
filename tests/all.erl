@@ -26,11 +26,11 @@ start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
 
     ok=setup(),
-    ok=connect_tests:start(),
-
+    ok=cluster_tests:start(),
+   
     io:format("Stop OK !!! ~p~n",[{?MODULE,?FUNCTION_NAME}]),
-  %  timer:sleep(2000),
- %   init:stop(),
+    timer:sleep(2000),
+    init:stop(),
     ok.
 
 
@@ -74,8 +74,9 @@ setup()->
 		  {cluster_spec,?ClusterFile},
 		  {host_spec,?HostFile},
 		  {application_spec,?ApplicationFile},
-		  {spec_dir,"."},
-		  {nodes_to_connect,?NodesToConnect}]}],
+		  {spec_dir,"."}]
+	    }
+	   ],
 
 
     ok=application:set_env(AppEnv),
